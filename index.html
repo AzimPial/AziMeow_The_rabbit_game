@@ -376,7 +376,12 @@ function updatePlayer(level) {
 
     // Jump
     if ((keys.jump || touchJump) && player.grounded && !player.jumpHeld) {
-        player.vy = level.invertedGravity ? -JUMP_FORCE : JUMP_FORCE;
+        if (level.invertedGravity) {
+            // In inverted gravity, jump pushes AWAY from ceiling (toward floor)
+            player.vy = JUMP_FORCE; // positive = toward floor
+        } else {
+            player.vy = -JUMP_FORCE; // negative = toward ceiling
+        }
         player.grounded = false;
         player.jumpHeld = true;
     }
