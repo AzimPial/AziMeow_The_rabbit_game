@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AZIMEOW - Can you survive the cat's cruelty?</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0a0a12;
+            font-family: 'Courier New', monospace;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #touchControls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            pointer-events: none;
+        }
+        .touch-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(139, 115, 85, 0.4);
+            border: 3px solid rgba(139, 69, 19, 0.6);
+            color: rgba(74, 55, 40, 0.9);
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            transition: background 0.1s;
+        }
+        .touch-btn:active, .touch-btn.active {
+            background: rgba(139, 115, 85, 0.7);
+        }
+        .move-btns {
+            display: flex;
+            gap: 15px;
+        }
+        #jumpBtn {
+            font-size: 22px;
+        }
+        @media (pointer: coarse), (max-width: 768px) {
+            #touchControls {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="touchControls">
+        <div class="move-btns">
+            <button id="leftBtn" class="touch-btn">&#9664;</button>
+            <button id="rightBtn" class="touch-btn">&#9654;</button>
+        </div>
+        <button id="jumpBtn" class="touch-btn">&#9650;</button>
+    </div>
+
+    <script>
+// ============================================================
+// AZIMEOW - A Trap Platformer
+// ============================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// ============================================================
+// CONSTANTS & CONFIG
+// ============================================================
+const GRAVITY = 0.6;
+const PLAYER_SPEED = 5;
+const PLAYER_ACCEL = 0.5;
+const PLAYER_FRICTION = 0.85;
+const JUMP_FORCE = -13;
+const PLAYER_SIZE = 30;
+
+const COLORS = {
+    bg: '#87CEEB',
+    bgTint: ['#87CEEB', '#F4A460', '#DEB887', '#D2691E', '#87CEEB', '#FFE4B5', '#FFDAB9', '#F5DEB3', '#FFEFD5', '#FFE4C4'],
+    sky: '#87CEEB',
+    sand: '#C2B280',
+    sandDark: '#A0926D',
+    sandstone: '#E0C58C',
+    sandstoneDark: '#B8A267',
+    platform: '#C2B280',
+    platformEdge: '#8B7355',
+    player: '#F5F5F5',
+    playerEyes: '#4A3728',
+    playerNose: '#FFB6C1',
+    spike: '#228B22',
+    cactus: '#2E8B57',
+    cactusDark: '#1E6B47',
+    exit: '#DEB887',
+    exitBorder: '#8B4513',
+    button: '#D2691E',
+    buttonText: '#FFFFFF',
+    speedPad: '#DAA520',
+    wall: '#DEB887',
+    fakeWall: '#DEB887',
+    trigger: 'rgba(139, 69, 19, 0.2)',
+    text: '#4A3728',
+    particle: ['#8B4513', '#228B22', '#DAA520', '#DEB887'],
+    deadBush: '#8B7355',
+    desertSky: '#87CEEB',
+    horizon: '#FFE4B5'
+};
+
+const TAUNTS = [
+    "Oops! 🐰",
+    "Don't cactus about it",
+    "Hop luck next time!",
+    "Thistle be that again",
+    "Sage advice: try again",
+    "That's not very fur-tunate",
+    "Carrot top!",
+    "Trust issues: activated",
+    "Lettuce try again",
+    "You got burrowed! 🐇"
+];
+
+const TIPS = [
+    "Pro tip: Some platforms look solid but aren't 🐫",
+    "Pro tip: Cacti hurt, but some are fake 🌵",
+    "Pro tip: Dead bushes mark safe spots",
+    "Pro tip: The horizon hides secrets",
+    "Pro tip: Watch for sand movement",
+    "Pro tip: Timing your hop is key",
+    "Pro tip: Desert wells lead somewhere",
+    "Pro tip: The exit door shimmers",
+    "Pro tip: A pyramid awaits the brave",
+    "Pro tip: Patience rewards the careful"
+];
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let gameState = 'start'; // start, playing, transition, death, win
+let currentLevel = 0;
+let deathCount = 0;
+let tauntText = '';
+let tauntTimer = 0;
+let transitionTimer = 0;
+let transitionText = '';
+let transitionTip = '';
+let screenShake = 0;
+let particles = [];
+let confetti = [];
+
+// ============================================================
+// INPUT HANDLING
+// ============================================================
+const keys = {
+    left: false,
+    right: false,
+    jump: false,
+    restart: false
+};
+
+let touchLeft = false;
+let touchRight = false;
+let touchJump = false;
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.jump = true;
+    if (e.key === 'r' || e.key === 'R') keys.restart = true;
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.jump = false;
+    if (e.key === 'r' || e.key === 'R') keys.restart = false;
+});
+
+// Touch controls
+const leftBtn = document.getElementById('leftBtn');
+const rightBtn = document.getElementById('rightBtn');
+const jumpBtn = document.getElementById('jumpBtn');
+
+function setupTouchBtn(btn, key) {
+    btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (key === 'left') touchLeft = true;
+        if (key === 'right') touchRight = true;
+        if (key === 'jump') touchJump = true;
+        btn.classList.add('active');
+    });
+    btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        if (key === 'left') touchLeft = false;
+        if (key === 'right') touchRight = false;
+        if (key === 'jump') touchJump = false;
+        btn.classList.remove('active');
+    });
+    btn.addEventListener('touchcancel', (e) => {
+        if (key === 'left') touchLeft = false;
+        if (key === 'right') touchRight = false;
+        if (key === 'jump') touchJump = false;
+        btn.classList.remove('active');
+    });
+}
+
+setupTouchBtn(leftBtn, 'left');
+setupTouchBtn(rightBtn, 'right');
+setupTouchBtn(jumpBtn, 'jump');
+
+canvas.addEventListener('click', handleClick);
+
+// ============================================================
+// PLAYER
+// ============================================================
+let player = {
+    x: 50,
+    y: 100,
+    vx: 0,
+    vy: 0,
+    width: PLAYER_SIZE,
+    height: PLAYER_SIZE,
+    grounded: false,
+    jumpHeld: false,
+    bobOffset: 0,
+    bobTimer: 0,
+    dead: false,
+    flashTimer: 0,
+    mirroredControls: false,
+    stillTimer: 0,
+    exited: false
+};
+
+function resetPlayer(spawnX, spawnY) {
+    player.x = spawnX || 50;
+    player.y = spawnY || 100;
+    player.vx = 0;
+    player.vy = 0;
+    player.grounded = false;
+    player.jumpHeld = false;
+    player.dead = false;
+    player.flashTimer = 0;
+    player.mirroredControls = false;
+    player.stillTimer = 0;
+    player.exited = false;
+}
+
+function updatePlayer(level) {
+    if (player.dead) return;
+
+    // Check if controls are mirrored (Level 8)
+    let moveLeft = keys.left || touchLeft;
+    let moveRight = keys.right || touchRight;
+    if (player.mirroredControls) {
+        [moveLeft, moveRight] = [moveRight, moveLeft];
+    }
+
+    // Horizontal movement
+    if (moveLeft) {
+        player.vx -= PLAYER_ACCEL;
+    } else if (moveRight) {
+        player.vx += PLAYER_ACCEL;
+    } else {
+        player.vx *= PLAYER_FRICTION;
+    }
+    player.vx = Math.max(-PLAYER_SPEED, Math.min(PLAYER_SPEED, player.vx));
+
+    // Gravity (check for inverted gravity)
+    let gravity = level.invertedGravity ? -GRAVITY : GRAVITY;
+    player.vy += gravity;
+    player.vy = Math.max(-20, Math.min(20, player.vy));
+
+    // Jump
+    if ((keys.jump || touchJump) && player.grounded && !player.jumpHeld) {
+        player.vy = level.invertedGravity ? -JUMP_FORCE : JUMP_FORCE;
+        player.grounded = false;
+        player.jumpHeld = true;
+    }
+    if (!keys.jump && !touchJump) {
+        player.jumpHeld = false;
+        // Variable jump height
+        if (player.vy < 0) {
+            player.vy *= 0.9;
+        }
+    }
+
+    // Move and collide
+    player.x += player.vx;
+    resolveCollisionsX(level.platforms);
+    
+    player.y += player.vy;
+    player.grounded = false;
+    resolveCollisionsY(level.platforms);
+
+    // Idle bob animation
+    player.bobTimer += 0.1;
+    player.bobOffset = Math.sin(player.bobTimer) * 2;
+
+    // Still timer for level 10
+    if (Math.abs(player.vx) < 0.1 && player.grounded) {
+        player.stillTimer++;
+    } else {
+        player.stillTimer = 0;
+    }
+}
+
+function resolveCollisionsX(platforms) {
+    for (let p of platforms) {
+        if (!p.solid) continue;
+        if (checkAABB(player, p)) {
+            if (player.vx > 0) {
+                player.x = p.x - player.width;
+            } else if (player.vx < 0) {
+                player.x = p.x + p.width;
+            }
+            player.vx = 0;
+        }
+    }
+}
+
+function resolveCollisionsY(platforms) {
+    for (let p of platforms) {
+        if (!p.solid) continue;
+        if (checkAABB(player, p)) {
+            if (player.vy > 0) {
+                player.y = p.y - player.height;
+                player.grounded = true;
+            } else if (player.vy < 0) {
+                player.y = p.y + p.height;
+            }
+            player.vy = 0;
+        }
+    }
+}
+
+function checkAABB(a, b) {
+    return a.x < b.x + b.width &&
+           a.x + a.width > b.x &&
+           a.y < b.y + b.height &&
+           a.y + a.height > b.y;
+}
+
+// ============================================================
+// DEATH & PARTICLES
+// ============================================================
+function killPlayer() {
+    if (player.dead) return;
+    player.dead = true;
+    deathCount++;
+    screenShake = 15;
+    
+    // Spawn death particles
+    for (let i = 0; i < 30; i++) {
+        particles.push({
+            x: player.x + player.width / 2,
+            y: player.y + player.height / 2,
+            vx: (Math.random() - 0.5) * 15,
+            vy: (Math.random() - 0.5) * 15,
+            size: Math.random() * 8 + 3,
+            color: COLORS.particle[Math.floor(Math.random() * COLORS.particle.length)],
+            life: 60
+        });
+    }
+    
+    tauntText = TAUNTS[Math.floor(Math.random() * TAUNTS.length)];
+    tauntTimer = 60;
+    gameState = 'death';
+}
+
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.3;
+        p.life--;
+        p.size *= 0.95;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+}
+
+function updateConfetti() {
+    for (let i = confetti.length - 1; i >= 0; i--) {
+        let c = confetti[i];
+        c.x += c.vx;
+        c.y += c.vy;
+        c.vy += 0.1;
+        c.rotation += c.rotSpeed;
+        c.life--;
+        if (c.life <= 0) confetti.splice(i, 1);
+    }
+}
+
+function spawnConfetti() {
+    for (let i = 0; i < 100; i++) {
+        confetti.push({
+            x: Math.random() * canvas.width,
+            y: -20,
+            vx: (Math.random() - 0.5) * 5,
+            vy: Math.random() * 3 + 2,
+            size: Math.random() * 10 + 5,
+            color: COLORS.particle[Math.floor(Math.random() * COLORS.particle.length)],
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.2,
+            life: 300
+        });
+    }
+}
+
+// ============================================================
+// LEVEL DATA
+// ============================================================
+const levels = [
+    // Level 1 - Welcome Fool
+    {
+        name: "Welcome Fool",
+        bgTint: '#0f0a18',
+        spawnX: 50,
+        spawnY: 300,
+        platforms: [
+            { x: 0, y: 400, width: 800, height: 50, solid: true }
+        ],
+        spikes: [],
+        exit: { x: 650, y: 350, width: 40, height: 50 },
+        traps: [
+            {
+                type: 'invisibleSpike',
+                triggerX: 600,
+                triggered: false,
+                spike: { x: 600, y: 380, width: 50, height: 20, active: false }
+            }
+        ],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [],
+        countdown: null,
+        movingWalls: [],
+        triggerTiles: [],
+        exitMoving: null
+    },
+    // Level 2 - Gravity Lied
+    {
+        name: "Gravity Lied",
+        bgTint: '#0a0f12',
+        spawnX: 50,
+        spawnY: 330,
+        platforms: [
+            { x: 0, y: 380, width: 350, height: 30, solid: true },
+            { x: 0, y: 0, width: 350, height: 30, solid: true },
+            { x: 400, y: 380, width: 200, height: 30, solid: true },
+            { x: 400, y: 0, width: 200, height: 30, solid: true },
+            { x: 650, y: 380, width: 150, height: 30, solid: true },
+            { x: 650, y: 0, width: 150, height: 30, solid: true }
+        ],
+        spikes: [
+            { x: 350, y: 300, width: 50, height: 20 }
+        ],
+        exit: { x: 700, y: 330, width: 40, height: 50 },
+        traps: [
+            {
+                type: 'gravityFlip',
+                triggerX: 300,
+                triggered: false,
+                inverted: false
+            }
+        ],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [],
+        countdown: null,
+        movingWalls: [],
+        triggerTiles: [],
+        exitMoving: null
+    },
+    // Level 3 - The Helpful Button
+    {
+        name: "The Helpful Button",
+        bgTint: '#0f1210',
+        spawnX: 50,
+        spawnY: 200,
+        platforms: [
+            { x: 0, y: 300, width: 300, height: 30, solid: true },
+            { x: 300, y: 300, width: 500, height: 30, solid: true },
+            { x: 300, y: 450, width: 500, height: 50, solid: true }
+        ],
+        spikes: [
+            { x: 300, y: 380, width: 500, height: 70 }
+        ],
+        exit: { x: 700, y: 250, width: 40, height: 50 },
+        traps: [],
+        fakeWalls: [],
+        buttons: [
+            {
+                x: 150, y: 270, width: 80, height: 30,
+                pressed: false,
+                trapdoorOpen: false
+            }
+        ],
+        trapdoor: { x: 300, y: 300, width: 100, height: 30, open: false },
+        speedPads: [],
+        countdown: null,
+        movingWalls: [],
+        triggerTiles: [],
+        exitMoving: null
+    },
+    // Level 4 - Closing Time
+    {
+        name: "Closing Time",
+        bgTint: '#120a0a',
+        spawnX: 50,
+        spawnY: 300,
+        platforms: [
+            { x: 0, y: 400, width: 800, height: 50, solid: true }
+        ],
+        spikes: [
+            { x: 0, y: 370, width: 800, height: 30 }
+        ],
+        exit: { x: 700, y: 350, width: 40, height: 50 },
+        traps: [],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [],
+        countdown: null,
+        movingWalls: [
+            { x: 0, y: 100, width: 40, height: 300, targetX: 200, speed: 1 },
+            { x: 760, y: 100, width: 40, height: 300, targetX: 560, speed: 1 },
+            { x: 200, y: 100, width: 30, height: 300, solid: false, decoy: true },
+            { x: 380, y: 100, width: 40, height: 300, solid: true, isGap: true, gapY: 150, gapHeight: 100 }
+        ],
+        triggerTiles: [],
+        exitMoving: null
+    },
+    // Level 5 - Trust Issues
+    {
+        name: "Trust Issues",
+        bgTint: '#0a0a12',
+        spawnX: 50,
+        spawnY: 200,
+        platforms: [
+            { x: 0, y: 250, width: 100, height: 30, solid: true },
+            { x: 150, y: 250, width: 100, height: 30, solid: true, fake: false },
+            { x: 300, y: 250, width: 100, height: 30, solid: true, fake: true },
+            { x: 450, y: 250, width: 100, height: 30, solid: true, fake: true },
+            { x: 600, y: 250, width: 100, height: 30, solid: true, fake: true },
+            { x: 750, y: 250, width: 50, height: 30, solid: true }
+        ],
+        spikes: [
+            { x: 0, y: 420, width: 800, height: 30 }
+        ],
+        exit: { x: 750, y: 200, width: 40, height: 50 },
+        traps: [],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [],
+        countdown: null,
+        movingWalls: [],
+        triggerTiles: [],
+        exitMoving: null
+    },
+    // Level 6 - Speed Kills
+    {
+        name: "Speed Kills",
+        bgTint: '#0f0f0a',
+        spawnX: 50,
+        spawnY: 300,
+        platforms: [
+            { x: 0, y: 400, width: 200, height: 50, solid: true },
+            { x: 200, y: 400, width: 100, height: 50, solid: true },
+            { x: 500, y: 200, width: 300, height: 30, solid: true }
+        ],
+        spikes: [
+            { x: 700, y: 170, width: 100, height: 30 }
+        ],
+        exit: { x: 700, y: 150, width: 40, height: 50 },
+        traps: [],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [
+            { x: 220, y: 370, width: 60, height: 30, boostX: 25 }
+        ],
+        countdown: null,
+        movingWalls: [],
+        triggerTiles: [],
+        exitMoving: null
+    },
+    // Level 7 - Countdown
+    {
+        name: "Countdown",
+        bgTint: '#0a0f0f',
+        spawnX: 50,
+        spawnY: 300,
+        platforms: [
+            { x: 0, y: 400, width: 800, height: 50, solid: true },
+            { x: 300, y: 300, width: 200, height: 20, solid: true, pressurePlate: true }
+        ],
+        spikes: [
+            { x: 0, y: 370, width: 250, height: 30 },
+            { x: 550, y: 370, width: 250, height: 30 }
+        ],
+        exit: { x: 700, y: 350, width: 40, height: 50 },
+        traps: [],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [],
+        countdown: { seconds: 10, timer: 600, triggered: false, triggeredBySpeed: 0 },
+        movingWalls: [],
+        triggerTiles: [],
+        exitMoving: null
+    },
+    // Level 8 - Mirror Mirror
+    {
+        name: "Mirror Mirror",
+        bgTint: '#0f0a15',
+        spawnX: 50,
+        spawnY: 300,
+        platforms: [
+            { x: 0, y: 400, width: 800, height: 50, solid: true },
+            { x: 200, y: 300, width: 150, height: 20, solid: true },
+            { x: 450, y: 300, width: 150, height: 20, solid: true }
+        ],
+        spikes: [
+            { x: 0, y: 370, width: 200, height: 30 },
+            { x: 600, y: 370, width: 200, height: 30 }
+        ],
+        exit: { x: 700, y: 350, width: 40, height: 50 },
+        traps: [],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [],
+        countdown: null,
+        movingWalls: [],
+        triggerTiles: [
+            { x: 200, y: 280, width: 150, height: 20, triggered: false, mirror: true }
+        ],
+        exitMoving: null
+    },
+    // Level 9 - Almost There
+    {
+        name: "Almost There",
+        bgTint: '#0a0a12',
+        spawnX: 50,
+        spawnY: 200,
+        platforms: [
+            { x: 0, y: 250, width: 800, height: 30, solid: true }
+        ],
+        spikes: [
+            { x: 0, y: 420, width: 800, height: 30 }
+        ],
+        exit: { x: 700, y: 200, width: 40, height: 50 },
+        traps: [],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [],
+        countdown: null,
+        movingWalls: [],
+        triggerTiles: [],
+        exitMoving: {
+            originalX: 700,
+            currentX: 700,
+            movesLeft: 3,
+            triggered: false
+        }
+    },
+    // Level 10 - Final Boss of Trolls
+    {
+        name: "Final Boss",
+        bgTint: '#0a0a12',
+        spawnX: 50,
+        spawnY: 300,
+        platforms: [
+            { x: 0, y: 400, width: 200, height: 50, solid: true },
+            { x: 250, y: 400, width: 100, height: 50, solid: true },
+            { x: 400, y: 400, width: 150, height: 50, solid: true },
+            { x: 600, y: 400, width: 200, height: 50, solid: true }
+        ],
+        spikes: [
+            { x: 200, y: 370, width: 50, height: 30 },
+            { x: 350, y: 370, width: 50, height: 30 },
+            { x: 550, y: 370, width: 50, height: 30 }
+        ],
+        exit: { x: 700, y: 350, width: 40, height: 50 },
+        traps: [],
+        fakeWalls: [],
+        buttons: [],
+        speedPads: [],
+        countdown: null,
+        movingWalls: [],
+        triggerTiles: [],
+        exitMoving: null,
+        fakeWinScreens: [
+            { x: 200, y: 100, width: 400, height: 200, triggered: false },
+            { x: 200, y: 100, width: 400, height: 200, triggered: false }
+        ],
+        stillTimerRequired: 180 // 3 seconds at 60fps
+    }
+];
+
+let currentLevelData = null;
+
+// ============================================================
+// TRAP LOGIC
+// ============================================================
+function updateTraps(level) {
+    // Level 1: Invisible spike near exit
+    if (level.traps) {
+        for (let trap of level.traps) {
+            if (trap.type === 'invisibleSpike' && !trap.triggered) {
+                if (player.x > trap.triggerX) {
+                    trap.triggered = true;
+                    trap.spike.active = true;
+                }
+            }
+        }
+    }
+
+    // Level 2: Gravity flip
+    if (level.traps) {
+        for (let trap of level.traps) {
+            if (trap.type === 'gravityFlip' && !trap.triggered) {
+                if (player.x > trap.triggerX) {
+                    trap.triggered = true;
+                    trap.inverted = true;
+                    level.invertedGravity = true;
+                }
+            }
+        }
+    }
+
+    // Level 3: Trapdoor button
+    if (level.buttons) {
+        for (let btn of level.buttons) {
+            if (checkAABB(player, btn) && !btn.pressed) {
+                btn.pressed = true;
+                if (level.trapdoor) {
+                    level.trapdoor.open = true;
+                }
+            }
+        }
+    }
+
+    // Level 3: Trapdoor
+    if (level.trapdoor && level.trapdoor.open) {
+        // Remove trapdoor from collision
+        for (let i = 0; i < level.platforms.length; i++) {
+            if (level.platforms[i] === level.trapdoor) {
+                level.platforms[i].solid = false;
+            }
+        }
+    }
+
+    // Level 4: Closing walls
+    if (level.movingWalls) {
+        for (let wall of level.movingWalls) {
+            if (wall.isGap) {
+                // Find real gap position
+                let gapX = Math.min(wall.x, wall.targetX) + 100;
+                wall.gapX = gapX;
+            }
+        }
+    }
+
+    // Level 7: Countdown pressure plate
+    if (level.countdown) {
+        if (checkAABB(player, { x: 300, y: 300, width: 200, height: 20 })) {
+            if (Math.abs(player.vx) > 3) {
+                level.countdown.triggeredBySpeed++;
+                if (level.countdown.triggeredBySpeed > 10) {
+                    level.countdown.triggered = true;
+                }
+            }
+        }
+    }
+
+    // Level 8: Mirror trigger
+    if (level.triggerTiles) {
+        for (let tile of level.triggerTiles) {
+            if (!tile.triggered && checkAABB(player, tile)) {
+                tile.triggered = true;
+                player.mirroredControls = true;
+            }
+        }
+    }
+
+    // Level 9: Moving exit
+    if (level.exitMoving && !level.exitMoving.triggered) {
+        let dist = Math.abs(player.x - level.exit.currentX);
+        if (dist < 100 && level.exitMoving.movesLeft > 0) {
+            level.exitMoving.triggered = true;
+            level.exitMoving.movesLeft--;
+            level.exit.x -= 200;
+            setTimeout(() => {
+                level.exitMoving.triggered = false;
+            }, 100);
+        }
+    }
+
+    // Level 10: Fake win screens
+    if (level.fakeWinScreens) {
+        for (let fake of level.fakeWinScreens) {
+            if (!fake.triggered && checkAABB(player, fake)) {
+                fake.triggered = true;
+                resetLevel();
+            }
+        }
+    }
+
+    // Level 10: Stand still to win
+    if (level.stillTimerRequired) {
+        if (player.stillTimer >= level.stillTimerRequired) {
+            gameState = 'win';
+            spawnConfetti();
+        }
+    }
+}
+
+function checkSpikeCollision(level) {
+    // Regular spikes
+    for (let spike of level.spikes) {
+        if (checkAABB(player, spike)) {
+            killPlayer();
+            return;
+        }
+    }
+
+    // Invisible spike (Level 1)
+    if (level.traps) {
+        for (let trap of level.traps) {
+            if (trap.type === 'invisibleSpike' && trap.spike.active) {
+                if (checkAABB(player, trap.spike)) {
+                    killPlayer();
+                    return;
+                }
+            }
+        }
+    }
+
+    // Fake platforms (Level 5)
+    for (let plat of level.platforms) {
+        if (plat.fake) {
+            // Only check if player is above and falling
+            if (player.vy > 0 && 
+                player.x + player.width > plat.x && 
+                player.x < plat.x + plat.width &&
+                player.y + player.height >= plat.y &&
+                player.y + player.height <= plat.y + 20) {
+                killPlayer();
+                return;
+            }
+        }
+    }
+
+    // Speed pads (Level 6)
+    if (level.speedPads) {
+        for (let pad of level.speedPads) {
+            if (checkAABB(player, pad)) {
+                player.vx = pad.boostX || 20;
+            }
+        }
+    }
+
+    // Out of bounds
+    if (player.y > canvas.height + 100 || player.y < -200 || 
+        player.x < -100 || player.x > canvas.width + 100) {
+        killPlayer();
+    }
+}
+
+function checkExitCollision(level) {
+    if (gameState === 'playing' && !player.exited && checkAABB(player, level.exit)) {
+        player.exited = true;
+        nextLevel();
+    }
+}
+
+// ============================================================
+// LEVEL MANAGEMENT
+// ============================================================
+function loadLevel(index) {
+    currentLevel = index;
+    currentLevelData = JSON.parse(JSON.stringify(levels[index]));
+    
+    // Re-enable platforms for cloned objects
+    if (currentLevelData.trapdoor) {
+        currentLevelData.trapdoor.open = false;
+        for (let plat of currentLevelData.platforms) {
+            if (plat === currentLevelData.trapdoor) {
+                plat.solid = true;
+            }
+        }
+    }
+    
+    // Reset traps
+    if (currentLevelData.traps) {
+        for (let trap of currentLevelData.traps) {
+            if (trap.type === 'invisibleSpike') {
+                trap.triggered = false;
+                trap.spike.active = false;
+            }
+            if (trap.type === 'gravityFlip') {
+                trap.triggered = false;
+                trap.inverted = false;
+            }
+        }
+    }
+    currentLevelData.invertedGravity = false;
+    
+    // Reset buttons
+    if (currentLevelData.buttons) {
+        for (let btn of currentLevelData.buttons) {
+            btn.pressed = false;
+        }
+    }
+    
+    // Reset trigger tiles
+    if (currentLevelData.triggerTiles) {
+        for (let tile of currentLevelData.triggerTiles) {
+            tile.triggered = false;
+        }
+    }
+    
+    // Reset fake win screens
+    if (currentLevelData.fakeWinScreens) {
+        for (let fake of currentLevelData.fakeWinScreens) {
+            fake.triggered = false;
+        }
+    }
+    
+    // Reset exit position
+    if (currentLevelData.exitMoving) {
+        currentLevelData.exit.x = currentLevelData.exitMoving.originalX;
+        currentLevelData.exitMoving.movesLeft = 3;
+        currentLevelData.exitMoving.triggered = false;
+    }
+    
+    resetPlayer(currentLevelData.spawnX, currentLevelData.spawnY);
+    player.exited = false;
+}
+
+function resetLevel() {
+    loadLevel(currentLevel);
+}
+
+function nextLevel() {
+    if (currentLevel < levels.length - 1) {
+        currentLevel++;
+        transitionTip = TIPS[currentLevel] || "Pro tip: Stay vigilant 😈";
+        transitionText = `LEVEL ${currentLevel + 1}`;
+        transitionTimer = 90;
+        gameState = 'transition';
+    } else {
+        gameState = 'win';
+        spawnConfetti();
+    }
+}
+
+function startGame() {
+    deathCount = 0;
+    currentLevel = 0;
+    transitionTip = TIPS[0];
+    transitionText = 'LEVEL 1';
+    transitionTimer = 90;
+    gameState = 'transition';
+}
+
+// ============================================================
+// CLICK HANDLER
+// ============================================================
+function handleClick(e) {
+    e.preventDefault();
+    
+    if (gameState === 'start' || gameState === 'win') {
+        startGame();
+    }
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function drawBackground(level) {
+    // Desert sky gradient
+    let skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    skyGradient.addColorStop(0, '#87CEEB');
+    skyGradient.addColorStop(0.6, '#FFE4B5');
+    skyGradient.addColorStop(1, '#DEB887');
+    ctx.fillStyle = skyGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Sun
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(canvas.width - 100, 80, 40, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Sun glow
+    let sunGlow = ctx.createRadialGradient(canvas.width - 100, 80, 30, canvas.width - 100, 80, 80);
+    sunGlow.addColorStop(0, 'rgba(255, 215, 0, 0.5)');
+    sunGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    ctx.fillStyle = sunGlow;
+    ctx.fillRect(canvas.width - 180, 0, 160, 160);
+    
+    // Sand dunes in background (parallax feel)
+    ctx.fillStyle = '#D2B48C';
+    for (let d = 0; d < 5; d++) {
+        let dx = d * 200 - 50;
+        let dy = canvas.height - 150 + Math.sin(d * 1.5) * 30;
+        ctx.beginPath();
+        ctx.moveTo(dx, canvas.height);
+        ctx.quadraticCurveTo(dx + 100, dy, dx + 200, canvas.height);
+        ctx.fill();
+    }
+    
+    // Minecraft-style sand block pattern (subtle)
+    ctx.fillStyle = 'rgba(139, 115, 85, 0.1)';
+    for (let x = 0; x < canvas.width; x += 32) {
+        for (let y = canvas.height - 80; y < canvas.height; y += 32) {
+            ctx.fillRect(x, y, 31, 31);
+        }
+    }
+    
+    // Dead bushes scattered (decorative)
+    drawDeadBush(100, canvas.height - 75);
+    drawDeadBush(300, canvas.height - 70);
+    drawDeadBush(550, canvas.height - 80);
+    drawDeadBush(700, canvas.height - 75);
+}
+
+function drawDeadBush(x, y) {
+    ctx.strokeStyle = '#8B7355';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y - 20);
+    ctx.lineTo(x - 8, y - 15);
+    ctx.moveTo(x, y - 15);
+    ctx.lineTo(x + 8, y - 12);
+    ctx.moveTo(x, y - 10);
+    ctx.lineTo(x - 5, y - 5);
+    ctx.moveTo(x, y - 10);
+    ctx.lineTo(x + 6, y - 6);
+    ctx.stroke();
+}
+
+function drawPlatforms(level) {
+    for (let plat of level.platforms) {
+        if (!plat.solid && !plat.fake) continue;
+        
+        // Minecraft-style sandstone block texture
+        ctx.fillStyle = plat.fake ? '#B8A267' : COLORS.sandstone;
+        ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+        
+        // Block border lines (Minecraft style)
+        ctx.strokeStyle = plat.fake ? '#8B7355' : COLORS.sandstoneDark;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
+        
+        // Sand texture dots
+        ctx.fillStyle = plat.fake ? '#A0926D' : COLORS.sandDark;
+        for (let dx = 4; dx < plat.width - 4; dx += 8) {
+            for (let dy = 4; dy < plat.height - 4; dy += 8) {
+                if (Math.random() > 0.7) {
+                    ctx.fillRect(plat.x + dx, plat.y + dy, 2, 2);
+                }
+            }
+        }
+        
+        // Top edge highlight (sand grain)
+        ctx.fillStyle = plat.fake ? '#C2B280' : '#E0C58C';
+        ctx.fillRect(plat.x, plat.y, plat.width, 3);
+        
+        // Fake indicator (subtle)
+        if (plat.fake) {
+            ctx.fillStyle = 'rgba(139, 69, 19, 0.2)';
+            ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+        }
+    }
+}
+
+function drawSpikes(level) {
+    // Draw cacti instead of spikes
+    for (let spike of level.spikes) {
+        drawCactus(spike.x, spike.y, spike.width, spike.height);
+    }
+    
+    // Invisible cactus (traps)
+    if (level.traps) {
+        for (let trap of level.traps) {
+            if (trap.type === 'invisibleSpike' && trap.spike.active) {
+                drawCactus(trap.spike.x, trap.spike.y, trap.spike.width, trap.spike.height);
+            }
+        }
+    }
+}
+
+function drawCactus(x, y, width, height) {
+    let cactusCount = Math.max(1, Math.floor(width / 25));
+    let cactusWidth = width / cactusCount;
+    
+    for (let i = 0; i < cactusCount; i++) {
+        let cx = x + i * cactusWidth + cactusWidth / 2;
+        
+        // Main cactus body
+        ctx.fillStyle = COLORS.cactus;
+        ctx.fillRect(cx - 8, y, 16, height);
+        
+        // Cactus highlights
+        ctx.fillStyle = COLORS.cactusDark;
+        ctx.fillRect(cx - 8, y, 4, height);
+        
+        // Cactus segments (rounded top)
+        ctx.fillStyle = COLORS.cactus;
+        ctx.beginPath();
+        ctx.arc(cx, y + 5, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Spines on cactus
+        ctx.strokeStyle = '#3CB371';
+        ctx.lineWidth = 1;
+        for (let s = 0; s < height; s += 12) {
+            // Left spines
+            ctx.beginPath();
+            ctx.moveTo(cx - 8, y + s);
+            ctx.lineTo(cx - 15, y + s - 3);
+            ctx.stroke();
+            // Right spines
+            ctx.beginPath();
+            ctx.moveTo(cx + 8, y + s);
+            ctx.lineTo(cx + 15, y + s - 3);
+            ctx.stroke();
+        }
+        
+        // Small arm on some cacti
+        if (i % 2 === 0 && height > 20) {
+            ctx.fillStyle = COLORS.cactus;
+            ctx.fillRect(cx + 8, y + 8, 10, 6);
+            ctx.fillRect(cx + 14, y + 2, 6, 14);
+            // Arm spines
+            ctx.strokeStyle = '#3CB371';
+            ctx.beginPath();
+            ctx.moveTo(cx + 14, y + 8);
+            ctx.lineTo(cx + 20, y + 6);
+            ctx.stroke();
+        }
+    }
+}
+
+function drawSpikeGroup(x, y, width, height) {
+    let spikeWidth = 15;
+    let count = Math.floor(width / spikeWidth);
+    for (let i = 0; i < count; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x + i * spikeWidth, y + height);
+        ctx.lineTo(x + i * spikeWidth + spikeWidth / 2, y);
+        ctx.lineTo(x + (i + 1) * spikeWidth, y + height);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+
+function drawExit(level) {
+    let exit = level.exit;
+    
+    // Desert temple door frame
+    // Outer stone frame
+    ctx.fillStyle = '#8B7355';
+    ctx.fillRect(exit.x - 10, exit.y - 10, exit.width + 20, exit.height + 10);
+    
+    // Inner archway (dark interior)
+    ctx.fillStyle = '#4A3728';
+    ctx.beginPath();
+    ctx.arc(exit.x + exit.width / 2, exit.y, exit.width / 2, Math.PI, 0);
+    ctx.lineTo(exit.x + exit.width, exit.y + exit.height);
+    ctx.lineTo(exit.x, exit.y + exit.height);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Treasure glow inside
+    let glowGradient = ctx.createRadialGradient(
+        exit.x + exit.width / 2, exit.y + exit.height / 2, 0,
+        exit.x + exit.width / 2, exit.y + exit.height / 2, 40
+    );
+    glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.5)');
+    glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    ctx.fillStyle = glowGradient;
+    ctx.fillRect(exit.x - 20, exit.y - 20, exit.width + 40, exit.height + 40);
+    
+    // Carved sandstone details
+    ctx.fillStyle = '#DEB887';
+    ctx.fillRect(exit.x - 8, exit.y - 8, 8, 8);
+    ctx.fillRect(exit.x + exit.width, exit.y - 8, 8, 8);
+    
+    // Gold trim
+    ctx.fillStyle = '#DAA520';
+    ctx.fillRect(exit.x - 10, exit.y + exit.height - 5, exit.width + 20, 5);
+    
+    // "Exit" text on sandstone
+    ctx.fillStyle = '#4A3728';
+    ctx.font = 'bold 10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('EXIT', exit.x + exit.width / 2, exit.y + exit.height / 2 + 5);
+}
+
+function drawButtons(level) {
+    if (!level.buttons) return;
+    
+    for (let btn of level.buttons) {
+        ctx.fillStyle = btn.pressed ? '#006600' : COLORS.button;
+        ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+        
+        ctx.fillStyle = COLORS.buttonText;
+        ctx.font = 'bold 12px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('OPEN EXIT', btn.x + btn.width / 2, btn.y + 20);
+    }
+}
+
+function drawSpeedPads(level) {
+    if (!level.speedPads) return;
+    
+    for (let pad of level.speedPads) {
+        // Sand glow effect
+        ctx.fillStyle = 'rgba(218, 165, 32, 0.3)';
+        ctx.fillRect(pad.x - 5, pad.y - 5, pad.width + 10, pad.height + 10);
+        
+        // Speed pad body (golden sandstone)
+        ctx.fillStyle = '#DAA520';
+        ctx.fillRect(pad.x, pad.y, pad.width, pad.height);
+        
+        // Etched arrows
+        ctx.fillStyle = '#8B4513';
+        ctx.font = 'bold 16px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('>>>', pad.x + pad.width / 2, pad.y + 20);
+        
+        // Top highlight
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(pad.x, pad.y, pad.width, 3);
+    }
+}
+
+function drawMovingWalls(level) {
+    if (!level.movingWalls) return;
+    
+    for (let wall of level.movingWalls) {
+        if (wall.decoy) {
+            // Decoy wall (sand texture)
+            ctx.fillStyle = 'rgba(139, 115, 85, 0.3)';
+            ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+            // Sand texture
+            ctx.strokeStyle = '#A0926D';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
+        } else {
+            // Sandstone wall
+            ctx.fillStyle = COLORS.sandstone;
+            ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+            
+            // Border
+            ctx.strokeStyle = COLORS.sandstoneDark;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
+            
+            // Sand texture
+            ctx.fillStyle = COLORS.sandDark;
+            for (let dx = 4; dx < wall.width - 4; dx += 8) {
+                for (let dy = 4; dy < wall.height - 4; dy += 8) {
+                    if (Math.random() > 0.7) {
+                        ctx.fillRect(wall.x + dx, wall.y + dy, 2, 2);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function drawCountdown(level) {
+    if (!level.countdown) return;
+    
+    let seconds = Math.ceil(level.countdown.timer / 60);
+    
+    // Desert-themed countdown display
+    ctx.fillStyle = level.countdown.triggered ? '#8B0000' : '#4A3728';
+    ctx.font = 'bold 48px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(seconds.toString(), canvas.width / 2, 80);
+    
+    if (level.countdown.triggered) {
+        ctx.fillStyle = '#8B0000';
+        ctx.font = 'bold 20px Courier New';
+        ctx.fillText('CACTI ACTIVATED!', canvas.width / 2, 120);
+    }
+}
+
+function drawFakeWinScreens(level) {
+    if (!level.fakeWinScreens) return;
+    
+    for (let fake of level.fakeWinScreens) {
+        if (fake.triggered) continue;
+        
+        // Desert temple chest style background
+        ctx.fillStyle = 'rgba(74, 55, 40, 0.95)';
+        ctx.fillRect(fake.x, fake.y, fake.width, fake.height);
+        
+        // Gold border
+        ctx.strokeStyle = '#DAA520';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(fake.x, fake.y, fake.width, fake.height);
+        
+        // Inner border
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(fake.x + 5, fake.y + 5, fake.width - 10, fake.height - 10);
+        
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 36px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('TREASURE!', fake.x + fake.width / 2, fake.y + 80);
+        
+        ctx.font = '20px Courier New';
+        ctx.fillStyle = '#DEB887';
+        ctx.fillText('Deaths: ' + deathCount, fake.x + fake.width / 2, fake.y + 130);
+        
+        // Fake shimmer effect
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.2)';
+        ctx.fillRect(fake.x + 10, fake.y + 10, fake.width - 20, fake.height / 3);
+    }
+}
+
+function drawTriggerTiles(level) {
+    if (!level.triggerTiles) return;
+    
+    for (let tile of level.triggerTiles) {
+        if (!tile.triggered) {
+            ctx.fillStyle = tile.mirror ? 'rgba(255, 0, 255, 0.2)' : COLORS.trigger;
+            ctx.fillRect(tile.x, tile.y, tile.width, tile.height);
+        }
+    }
+}
+
+function drawPlayer() {
+    if (player.dead) return;
+    
+    let px = player.x;
+    let py = player.y + player.bobOffset;
+    let cx = px + player.width / 2;
+    
+    // Dynamic ear wiggle based on movement
+    let earWiggle = Math.sin(Date.now() / 150) * 0.1;
+    
+    // Shadow under player (ellipse for soft shadow)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx, py + player.height + 3, player.width / 2 + 2, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // === FEET (behind body) - Minecraft style ===
+    ctx.fillStyle = '#E0E0E0';
+    ctx.fillRect(px + 2, py + player.height - 2, 10, 6);
+    ctx.fillRect(px + player.width - 12, py + player.height - 2, 10, 6);
+    
+    // === BODY - Minecraft boxy style ===
+    // Main body (rectangle)
+    ctx.fillStyle = '#F5F5F5';
+    ctx.fillRect(px + 4, py + 15, player.width - 8, player.height - 18);
+    
+    // Body shading (right side darker)
+    ctx.fillStyle = '#DCDCDC';
+    ctx.fillRect(px + 4, py + 15, 4, player.height - 18);
+    
+    // Tummy (lighter rectangle)
+    ctx.fillStyle = '#FAFAFA';
+    ctx.fillRect(cx - 6, py + 20, 12, player.height - 28);
+    
+    // === HEAD - Boxy Minecraft style ===
+    ctx.fillStyle = '#F5F5F5';
+    ctx.fillRect(cx - 14, py + 2, 28, 24);
+    
+    // Head shading
+    ctx.fillStyle = '#DCDCDC';
+    ctx.fillRect(cx - 14, py + 2, 4, 24);
+    
+    // === EARS - Boxy rounded tops ===
+    // Left ear outer
+    ctx.fillStyle = '#F5F5F5';
+    ctx.fillRect(px + 2, py - 12, 10, 18);
+    // Left ear top (rounded)
+    ctx.beginPath();
+    ctx.arc(px + 7, py - 12, 5, Math.PI, 0);
+    ctx.fill();
+    // Left ear inner (pink)
+    ctx.fillStyle = '#FFB6C1';
+    ctx.fillRect(px + 4, py - 10, 6, 14);
+    ctx.beginPath();
+    ctx.arc(px + 7, py - 10, 3, Math.PI, 0);
+    ctx.fill();
+    
+    // Right ear outer
+    ctx.fillStyle = '#F5F5F5';
+    ctx.fillRect(px + player.width - 12, py - 12, 10, 18);
+    // Right ear top (rounded)
+    ctx.beginPath();
+    ctx.arc(px + player.width - 7, py - 12, 5, Math.PI, 0);
+    ctx.fill();
+    // Right ear inner (pink)
+    ctx.fillStyle = '#FFB6C1';
+    ctx.fillRect(px + player.width - 10, py - 10, 6, 14);
+    ctx.beginPath();
+    ctx.arc(px + player.width - 7, py - 10, 3, Math.PI, 0);
+    ctx.fill();
+    
+    // === EYES - Pixelated Minecraft style ===
+    // Eye whites (pixel squares)
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(cx - 10, py + 6, 8, 10);
+    ctx.fillRect(cx + 2, py + 6, 8, 10);
+    
+    // Pupils (dark squares)
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(cx - 8, py + 8, 6, 8);
+    ctx.fillRect(cx + 4, py + 8, 6, 8);
+    
+    // Eye shine (small white pixel)
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(cx - 6, py + 8, 2, 2);
+    ctx.fillRect(cx + 6, py + 8, 2, 2);
+    
+    // === NOSE - Small pink box ===
+    ctx.fillStyle = '#FFB6C1';
+    ctx.fillRect(cx - 3, py + 18, 6, 4);
+    
+    // === MOUTH - Pixel lines ===
+    ctx.strokeStyle = '#C0A080';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'square';
+    // Cute 'w' mouth
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, py + 24);
+    ctx.lineTo(cx - 2, py + 26);
+    ctx.lineTo(cx, py + 24);
+    ctx.lineTo(cx + 2, py + 26);
+    ctx.lineTo(cx + 4, py + 24);
+    ctx.stroke();
+    
+    // === CHEEKS (blush) - Soft squares ===
+    ctx.fillStyle = 'rgba(255, 182, 193, 0.4)';
+    ctx.fillRect(px + 1, py + 16, 6, 4);
+    ctx.fillRect(px + player.width - 7, py + 16, 6, 4);
+    
+    // === WHISKERS - Pixel lines ===
+    ctx.strokeStyle = 'rgba(192, 192, 192, 0.5)';
+    ctx.lineWidth = 1;
+    // Left whiskers
+    ctx.beginPath();
+    ctx.moveTo(px + 4, py + 18);
+    ctx.lineTo(px - 4, py + 16);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(px + 4, py + 20);
+    ctx.lineTo(px - 4, py + 20);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(px + 4, py + 22);
+    ctx.lineTo(px - 4, py + 24);
+    ctx.stroke();
+    // Right whiskers
+    ctx.beginPath();
+    ctx.moveTo(px + player.width - 4, py + 18);
+    ctx.lineTo(px + player.width + 4, py + 16);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(px + player.width - 4, py + 20);
+    ctx.lineTo(px + player.width + 4, py + 20);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(px + player.width - 4, py + 22);
+    ctx.lineTo(px + player.width + 4, py + 24);
+    ctx.stroke();
+    
+    // === TAIL - Fluffy pixel ball ===
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(px + player.width - 2, py + player.height - 16, 10, 10);
+    ctx.fillStyle = '#E8E8E8';
+    ctx.fillRect(px + player.width + 4, py + player.height - 14, 4, 4);
+}
+
+function drawParticles() {
+    for (let p of particles) {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life / 60;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawConfetti() {
+    for (let c of confetti) {
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rotation);
+        ctx.fillStyle = c.color;
+        ctx.globalAlpha = c.life / 300;
+        ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size / 2);
+        ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawUI() {
+    // Death counter (sandstone carved style)
+    ctx.fillStyle = '#4A3728';
+    ctx.font = 'bold 20px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('DEATHS: ' + deathCount, 20, 35);
+    
+    // Level indicator
+    ctx.textAlign = 'right';
+    ctx.fillText('LEVEL ' + (currentLevel + 1), canvas.width - 20, 35);
+}
+
+function drawStartScreen() {
+    drawBackground(null);
+    
+    // Animated background rabbit silhouette
+    let time = Date.now() / 1000;
+    ctx.fillStyle = 'rgba(139, 69, 19, 0.08)';
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2 + Math.sin(time) * 50, canvas.height / 2 + 50, 150, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Title with sand effect
+    ctx.shadowColor = '#8B4513';
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = '#4A3728';
+    ctx.font = 'bold 72px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('DESERT HOPPER', canvas.width / 2, canvas.height / 2 - 50);
+    ctx.shadowBlur = 0;
+    
+    // Tagline
+    ctx.font = '24px Courier New';
+    ctx.fillStyle = '#4A3728';
+    ctx.fillText('Can the rabbit escape the desert?', canvas.width / 2, canvas.height / 2 + 10);
+    
+    // Start button
+    let btnWidth = 300;
+    let btnHeight = 60;
+    let btnX = canvas.width / 2 - btnWidth / 2;
+    let btnY = canvas.height / 2 + 60;
+    
+    ctx.fillStyle = '#C2B280';
+    ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
+    ctx.strokeStyle = '#8B7355';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
+    
+    ctx.fillStyle = '#4A3728';
+    ctx.font = 'bold 28px Courier New';
+    ctx.fillText('START HOPPING', canvas.width / 2, btnY + 40);
+    
+    // Controls hint
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = 'rgba(74, 55, 40, 0.7)';
+    ctx.fillText('Arrow Keys / WASD to move • Space to jump • R to restart', canvas.width / 2, canvas.height - 50);
+}
+
+function drawTransitionScreen() {
+    let levelData = levels[currentLevel] || levels[0];
+    drawBackground(levelData);
+    
+    // Level text (sandstone carved style)
+    ctx.shadowColor = '#8B4513';
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = '#4A3728';
+    ctx.font = 'bold 64px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(transitionText, canvas.width / 2, canvas.height / 2 - 30);
+    ctx.shadowBlur = 0;
+    
+    // Tip
+    ctx.font = '20px Courier New';
+    ctx.fillStyle = '#8B4513';
+    ctx.fillText(transitionTip, canvas.width / 2, canvas.height / 2 + 30);
+}
+
+function drawDeathOverlay() {
+    // Sandy dust overlay
+    ctx.fillStyle = 'rgba(210, 180, 140, 0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = '#4A3728';
+    ctx.font = 'bold 36px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('DEATHS: ' + deathCount, canvas.width / 2, canvas.height / 2 - 20);
+    
+    ctx.font = '28px Courier New';
+    ctx.fillStyle = '#8B4513';
+    ctx.fillText(tauntText, canvas.width / 2, canvas.height / 2 + 30);
+}
+
+function drawWinScreen() {
+    drawBackground(null);
+    drawConfetti();
+    
+    // Victory banner
+    ctx.fillStyle = 'rgba(222, 184, 135, 0.9)';
+    ctx.fillRect(0, canvas.height / 2 - 120, canvas.width, 240);
+    
+    // Gold borders
+    ctx.strokeStyle = '#DAA520';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(0, canvas.height / 2 - 120, canvas.width, 240);
+    
+    // Title
+    ctx.shadowColor = '#8B4513';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#4A3728';
+    ctx.font = 'bold 48px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('THE RABBIT ESCAPED!', canvas.width / 2, canvas.height / 2 - 50);
+    
+    ctx.font = 'bold 36px Courier New';
+    ctx.fillStyle = '#8B4513';
+    ctx.fillText('FREEDOM AT LAST! 🐰', canvas.width / 2, canvas.height / 2);
+    ctx.shadowBlur = 0;
+    
+    // Death count
+    ctx.font = '28px Courier New';
+    ctx.fillStyle = '#4A3728';
+    ctx.fillText('Total Deaths: ' + deathCount, canvas.width / 2, canvas.height / 2 + 50);
+    
+    // Rating
+    let rating = deathCount === 0 ? 'PERFECT! The smartest rabbit ever!' :
+                 deathCount < 5 ? 'Impressive! True desert hopper!' :
+                 deathCount < 20 ? 'Not bad! Learning the sands!' :
+                 'Better luck in the next desert!';
+    ctx.font = '20px Courier New';
+    ctx.fillText(rating, canvas.width / 2, canvas.height / 2 + 90);
+    
+    // Play again button (gold)
+    let btnWidth = 300;
+    let btnHeight = 60;
+    let btnX = canvas.width / 2 - btnWidth / 2;
+    let btnY = canvas.height / 2 + 130;
+    
+    ctx.fillStyle = '#C2B280';
+    ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
+    ctx.strokeStyle = '#DAA520';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
+    
+    ctx.fillStyle = '#4A3728';
+    ctx.font = 'bold 24px Courier New';
+    ctx.fillText('PLAY AGAIN', canvas.width / 2, btnY + 38);
+}
+
+// ============================================================
+// GAME LOOP
+// ============================================================
+function update() {
+    if (gameState === 'playing') {
+        updatePlayer(currentLevelData);
+        updateTraps(currentLevelData);
+        checkSpikeCollision(currentLevelData);
+        checkExitCollision(currentLevelData);
+        
+        if (keys.restart) {
+            resetLevel();
+        }
+    } else if (gameState === 'death') {
+        updateParticles();
+        tauntTimer--;
+        if (tauntTimer <= 0) {
+            resetLevel();
+            gameState = 'playing';
+        }
+    } else if (gameState === 'transition') {
+        transitionTimer--;
+        if (transitionTimer <= 0) {
+            loadLevel(currentLevel);
+            gameState = 'playing';
+        }
+    } else if (gameState === 'win') {
+        updateConfetti();
+        // Keep spawning confetti
+        if (confetti.length < 50 && Math.random() < 0.3) {
+            confetti.push({
+                x: Math.random() * canvas.width,
+                y: -20,
+                vx: (Math.random() - 0.5) * 5,
+                vy: Math.random() * 3 + 2,
+                size: Math.random() * 10 + 5,
+                color: COLORS.particle[Math.floor(Math.random() * COLORS.particle.length)],
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.2,
+                life: 300
+            });
+        }
+    }
+    
+    // Update screen shake
+    if (screenShake > 0) screenShake *= 0.9;
+    if (screenShake < 0.5) screenShake = 0;
+}
+
+function render() {
+    // Apply screen shake
+    ctx.save();
+    if (screenShake > 0) {
+        ctx.translate(
+            (Math.random() - 0.5) * screenShake,
+            (Math.random() - 0.5) * screenShake
+        );
+    }
+    
+    if (gameState === 'start') {
+        drawStartScreen();
+    } else if (gameState === 'transition') {
+        drawTransitionScreen();
+    } else if (gameState === 'win') {
+        drawWinScreen();
+    } else if (gameState === 'playing' || gameState === 'death') {
+        drawBackground(currentLevelData);
+        drawPlatforms(currentLevelData);
+        drawTriggerTiles(currentLevelData);
+        drawSpikes(currentLevelData);
+        drawButtons(currentLevelData);
+        drawSpeedPads(currentLevelData);
+        drawMovingWalls(currentLevelData);
+        drawExit(currentLevelData);
+        drawFakeWinScreens(currentLevelData);
+        drawCountdown(currentLevelData);
+        drawPlayer();
+        drawParticles();
+        drawUI();
+        
+        if (gameState === 'death') {
+            drawDeathOverlay();
+        }
+    }
+    
+    ctx.restore();
+}
+
+function gameLoop() {
+    update();
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// RESIZE HANDLING
+// ============================================================
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Start the game
+gameLoop();
+    </script>
+</body>
+</html>
