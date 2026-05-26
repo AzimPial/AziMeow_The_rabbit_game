@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AZIMEOW - Can you survive the cat's cruelty?</title>
+    <title>DANGER ZONE - Can the rabbit survive the deadly desert?</title>
     <style>
         * {
             margin: 0;
@@ -14,7 +14,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #0a0a12;
+            background: #3D0000;
             font-family: 'Courier New', monospace;
             touch-action: none;
             -webkit-touch-callout: none;
@@ -42,9 +42,9 @@
             width: 70px;
             height: 70px;
             border-radius: 50%;
-            background: rgba(139, 115, 85, 0.4);
-            border: 3px solid rgba(139, 69, 19, 0.6);
-            color: rgba(74, 55, 40, 0.9);
+            background: rgba(139, 0, 0, 0.4);
+            border: 3px solid rgba(255, 69, 0, 0.6);
+            color: rgba(255, 250, 250, 0.9);
             font-size: 28px;
             display: flex;
             align-items: center;
@@ -53,7 +53,7 @@
             transition: background 0.1s;
         }
         .touch-btn:active, .touch-btn.active {
-            background: rgba(139, 115, 85, 0.7);
+            background: rgba(139, 0, 0, 0.7);
         }
         .move-btns {
             display: flex;
@@ -98,34 +98,34 @@ const JUMP_FORCE = -13;
 const PLAYER_SIZE = 30;
 
 const COLORS = {
-    bg: '#87CEEB',
-    bgTint: ['#87CEEB', '#F4A460', '#DEB887', '#D2691E', '#87CEEB', '#FFE4B5', '#FFDAB9', '#F5DEB3', '#FFEFD5', '#FFE4C4'],
-    sky: '#87CEEB',
-    sand: '#C2B280',
-    sandDark: '#A0926D',
-    sandstone: '#E0C58C',
-    sandstoneDark: '#B8A267',
-    platform: '#C2B280',
-    platformEdge: '#8B7355',
+    bg: '#8B2500',
+    bgTint: ['#8B2500', '#CD5C5C', '#BC8F8F', '#A0522D', '#8B2500', '#CD853F', '#D2691E', '#8B4513', '#B22222', '#DC143C'],
+    sky: '#8B2500',
+    sand: '#8B4513',
+    sandDark: '#5D2A0A',
+    sandstone: '#A0522D',
+    sandstoneDark: '#6B3A1F',
+    platform: '#8B4513',
+    platformEdge: '#5D2A0A',
     player: '#F5F5F5',
     playerEyes: '#4A3728',
     playerNose: '#FFB6C1',
-    spike: '#228B22',
-    cactus: '#2E8B57',
-    cactusDark: '#1E6B47',
-    exit: '#DEB887',
-    exitBorder: '#8B4513',
-    button: '#D2691E',
+    spike: '#8B0000',
+    cactus: '#654321',
+    cactusDark: '#3D2314',
+    exit: '#CD5C5C',
+    exitBorder: '#8B0000',
+    button: '#B22222',
     buttonText: '#FFFFFF',
-    speedPad: '#DAA520',
-    wall: '#DEB887',
-    fakeWall: '#DEB887',
-    trigger: 'rgba(139, 69, 19, 0.2)',
-    text: '#4A3728',
-    particle: ['#8B4513', '#228B22', '#DAA520', '#DEB887'],
-    deadBush: '#8B7355',
-    desertSky: '#87CEEB',
-    horizon: '#FFE4B5'
+    speedPad: '#FF4500',
+    wall: '#CD5C5C',
+    fakeWall: '#CD5C5C',
+    trigger: 'rgba(139, 0, 0, 0.2)',
+    text: '#FFFAFA',
+    particle: ['#8B0000', '#B22222', '#FF4500', '#DC143C'],
+    deadBush: '#5D2A0A',
+    desertSky: '#8B2500',
+    horizon: '#CD5C5C'
 };
 
 const TAUNTS = [
@@ -998,29 +998,31 @@ function handleClick(e) {
 // RENDERING
 // ============================================================
 function drawBackground(level) {
-    // Desert sky gradient
+    // Dangerous red desert sky gradient
     let skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    skyGradient.addColorStop(0, '#87CEEB');
-    skyGradient.addColorStop(0.6, '#FFE4B5');
-    skyGradient.addColorStop(1, '#DEB887');
+    skyGradient.addColorStop(0, '#8B0000');
+    skyGradient.addColorStop(0.5, '#B22222');
+    skyGradient.addColorStop(0.8, '#CD5C5C');
+    skyGradient.addColorStop(1, '#8B4513');
     ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Sun
-    ctx.fillStyle = '#FFD700';
+    // Blood red sun (dangerous)
+    ctx.fillStyle = '#FF4500';
     ctx.beginPath();
     ctx.arc(canvas.width - 100, 80, 40, 0, Math.PI * 2);
     ctx.fill();
     
-    // Sun glow
+    // Red sun glow (ominous)
     let sunGlow = ctx.createRadialGradient(canvas.width - 100, 80, 30, canvas.width - 100, 80, 80);
-    sunGlow.addColorStop(0, 'rgba(255, 215, 0, 0.5)');
-    sunGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    sunGlow.addColorStop(0, 'rgba(255, 69, 0, 0.6)');
+    sunGlow.addColorStop(0.5, 'rgba(178, 34, 34, 0.3)');
+    sunGlow.addColorStop(1, 'rgba(178, 34, 34, 0)');
     ctx.fillStyle = sunGlow;
     ctx.fillRect(canvas.width - 180, 0, 160, 160);
     
-    // Sand dunes in background (parallax feel)
-    ctx.fillStyle = '#D2B48C';
+    // Dark sand dunes in background (parallax feel)
+    ctx.fillStyle = '#5D2906';
     for (let d = 0; d < 5; d++) {
         let dx = d * 200 - 50;
         let dy = canvas.height - 150 + Math.sin(d * 1.5) * 30;
@@ -1030,8 +1032,8 @@ function drawBackground(level) {
         ctx.fill();
     }
     
-    // Minecraft-style sand block pattern (subtle)
-    ctx.fillStyle = 'rgba(139, 115, 85, 0.1)';
+    // Minecraft-style dark sandstone block pattern (subtle)
+    ctx.fillStyle = 'rgba(93, 42, 10, 0.3)';
     for (let x = 0; x < canvas.width; x += 32) {
         for (let y = canvas.height - 80; y < canvas.height; y += 32) {
             ctx.fillRect(x, y, 31, 31);
@@ -1046,7 +1048,7 @@ function drawBackground(level) {
 }
 
 function drawDeadBush(x, y) {
-    ctx.strokeStyle = '#8B7355';
+    ctx.strokeStyle = '#5D2A0A';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -1133,8 +1135,8 @@ function drawCactus(x, y, width, height) {
         ctx.arc(cx, y + 5, 8, 0, Math.PI * 2);
         ctx.fill();
         
-        // Spines on cactus
-        ctx.strokeStyle = '#3CB371';
+        // Spines on cactus (dangerous thorns)
+        ctx.strokeStyle = '#8B0000';
         ctx.lineWidth = 1;
         for (let s = 0; s < height; s += 12) {
             // Left spines
@@ -1154,8 +1156,8 @@ function drawCactus(x, y, width, height) {
             ctx.fillStyle = COLORS.cactus;
             ctx.fillRect(cx + 8, y + 8, 10, 6);
             ctx.fillRect(cx + 14, y + 2, 6, 14);
-            // Arm spines
-            ctx.strokeStyle = '#3CB371';
+            // Arm spines (dangerous thorns)
+            ctx.strokeStyle = '#8B0000';
             ctx.beginPath();
             ctx.moveTo(cx + 14, y + 8);
             ctx.lineTo(cx + 20, y + 6);
@@ -1180,13 +1182,13 @@ function drawSpikeGroup(x, y, width, height) {
 function drawExit(level) {
     let exit = level.exit;
     
-    // Desert temple door frame
+    // Dark dangerous temple door frame
     // Outer stone frame
-    ctx.fillStyle = '#8B7355';
+    ctx.fillStyle = '#5D2A0A';
     ctx.fillRect(exit.x - 10, exit.y - 10, exit.width + 20, exit.height + 10);
     
-    // Inner archway (dark interior)
-    ctx.fillStyle = '#4A3728';
+    // Inner archway (dark interior with danger)
+    ctx.fillStyle = '#2F0F05';
     ctx.beginPath();
     ctx.arc(exit.x + exit.width / 2, exit.y, exit.width / 2, Math.PI, 0);
     ctx.lineTo(exit.x + exit.width, exit.y + exit.height);
@@ -1194,27 +1196,27 @@ function drawExit(level) {
     ctx.closePath();
     ctx.fill();
     
-    // Treasure glow inside
+    // Danger glow inside (red)
     let glowGradient = ctx.createRadialGradient(
         exit.x + exit.width / 2, exit.y + exit.height / 2, 0,
         exit.x + exit.width / 2, exit.y + exit.height / 2, 40
     );
-    glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.5)');
-    glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    glowGradient.addColorStop(0, 'rgba(255, 69, 0, 0.5)');
+    glowGradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
     ctx.fillStyle = glowGradient;
     ctx.fillRect(exit.x - 20, exit.y - 20, exit.width + 40, exit.height + 40);
     
-    // Carved sandstone details
-    ctx.fillStyle = '#DEB887';
+    // Dark sandstone details
+    ctx.fillStyle = '#8B4513';
     ctx.fillRect(exit.x - 8, exit.y - 8, 8, 8);
     ctx.fillRect(exit.x + exit.width, exit.y - 8, 8, 8);
     
-    // Gold trim
-    ctx.fillStyle = '#DAA520';
+    // Blood red trim
+    ctx.fillStyle = '#8B0000';
     ctx.fillRect(exit.x - 10, exit.y + exit.height - 5, exit.width + 20, 5);
     
     // "Exit" text on sandstone
-    ctx.fillStyle = '#4A3728';
+    ctx.fillStyle = '#FFFAFA';
     ctx.font = 'bold 10px Courier New';
     ctx.textAlign = 'center';
     ctx.fillText('EXIT', exit.x + exit.width / 2, exit.y + exit.height / 2 + 5);
@@ -1540,26 +1542,26 @@ function drawUI() {
 function drawStartScreen() {
     drawBackground(null);
     
-    // Animated background rabbit silhouette
+    // Animated background danger silhouette
     let time = Date.now() / 1000;
-    ctx.fillStyle = 'rgba(139, 69, 19, 0.08)';
+    ctx.fillStyle = 'rgba(139, 0, 0, 0.1)';
     ctx.beginPath();
     ctx.arc(canvas.width / 2 + Math.sin(time) * 50, canvas.height / 2 + 50, 150, 0, Math.PI * 2);
     ctx.fill();
     
-    // Title with sand effect
-    ctx.shadowColor = '#8B4513';
+    // Title with danger effect
+    ctx.shadowColor = '#8B0000';
     ctx.shadowBlur = 15;
-    ctx.fillStyle = '#4A3728';
+    ctx.fillStyle = '#FF4500';
     ctx.font = 'bold 72px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText('DESERT HOPPER', canvas.width / 2, canvas.height / 2 - 50);
+    ctx.fillText('DANGER ZONE', canvas.width / 2, canvas.height / 2 - 50);
     ctx.shadowBlur = 0;
     
     // Tagline
     ctx.font = '24px Courier New';
-    ctx.fillStyle = '#4A3728';
-    ctx.fillText('Can the rabbit escape the desert?', canvas.width / 2, canvas.height / 2 + 10);
+    ctx.fillStyle = '#CD5C5C';
+    ctx.fillText('Will the rabbit survive the deadly desert?', canvas.width / 2, canvas.height / 2 + 10);
     
     // Start button
     let btnWidth = 300;
@@ -1567,19 +1569,19 @@ function drawStartScreen() {
     let btnX = canvas.width / 2 - btnWidth / 2;
     let btnY = canvas.height / 2 + 60;
     
-    ctx.fillStyle = '#C2B280';
+    ctx.fillStyle = '#8B0000';
     ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
-    ctx.strokeStyle = '#8B7355';
+    ctx.strokeStyle = '#FF4500';
     ctx.lineWidth = 3;
     ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
     
-    ctx.fillStyle = '#4A3728';
+    ctx.fillStyle = '#FFFAFA';
     ctx.font = 'bold 28px Courier New';
     ctx.fillText('START HOPPING', canvas.width / 2, btnY + 40);
     
     // Controls hint
     ctx.font = '16px Courier New';
-    ctx.fillStyle = 'rgba(74, 55, 40, 0.7)';
+    ctx.fillStyle = 'rgba(255, 250, 250, 0.6)';
     ctx.fillText('Arrow Keys / WASD to move • Space to jump • R to restart', canvas.width / 2, canvas.height - 50);
 }
 
@@ -1587,10 +1589,10 @@ function drawTransitionScreen() {
     let levelData = levels[currentLevel] || levels[0];
     drawBackground(levelData);
     
-    // Level text (sandstone carved style)
-    ctx.shadowColor = '#8B4513';
+    // Level text (danger carved style)
+    ctx.shadowColor = '#8B0000';
     ctx.shadowBlur = 15;
-    ctx.fillStyle = '#4A3728';
+    ctx.fillStyle = '#FF4500';
     ctx.font = 'bold 64px Courier New';
     ctx.textAlign = 'center';
     ctx.fillText(transitionText, canvas.width / 2, canvas.height / 2 - 30);
@@ -1598,22 +1600,22 @@ function drawTransitionScreen() {
     
     // Tip
     ctx.font = '20px Courier New';
-    ctx.fillStyle = '#8B4513';
+    ctx.fillStyle = '#CD5C5C';
     ctx.fillText(transitionTip, canvas.width / 2, canvas.height / 2 + 30);
 }
 
 function drawDeathOverlay() {
-    // Sandy dust overlay
-    ctx.fillStyle = 'rgba(210, 180, 140, 0.7)';
+    // Dangerous red dust overlay
+    ctx.fillStyle = 'rgba(139, 0, 0, 0.7)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    ctx.fillStyle = '#4A3728';
+    ctx.fillStyle = '#FFFAFA';
     ctx.font = 'bold 36px Courier New';
     ctx.textAlign = 'center';
     ctx.fillText('DEATHS: ' + deathCount, canvas.width / 2, canvas.height / 2 - 20);
     
     ctx.font = '28px Courier New';
-    ctx.fillStyle = '#8B4513';
+    ctx.fillStyle = '#FF4500';
     ctx.fillText(tauntText, canvas.width / 2, canvas.height / 2 + 30);
 }
 
@@ -1622,30 +1624,30 @@ function drawWinScreen() {
     drawConfetti();
     
     // Victory banner
-    ctx.fillStyle = 'rgba(222, 184, 135, 0.9)';
+    ctx.fillStyle = 'rgba(139, 0, 0, 0.9)';
     ctx.fillRect(0, canvas.height / 2 - 120, canvas.width, 240);
     
-    // Gold borders
-    ctx.strokeStyle = '#DAA520';
+    // Blood red borders
+    ctx.strokeStyle = '#FF4500';
     ctx.lineWidth = 5;
     ctx.strokeRect(0, canvas.height / 2 - 120, canvas.width, 240);
     
     // Title
-    ctx.shadowColor = '#8B4513';
+    ctx.shadowColor = '#8B0000';
     ctx.shadowBlur = 20;
-    ctx.fillStyle = '#4A3728';
+    ctx.fillStyle = '#FF4500';
     ctx.font = 'bold 48px Courier New';
     ctx.textAlign = 'center';
     ctx.fillText('THE RABBIT ESCAPED!', canvas.width / 2, canvas.height / 2 - 50);
     
     ctx.font = 'bold 36px Courier New';
-    ctx.fillStyle = '#8B4513';
+    ctx.fillStyle = '#CD5C5C';
     ctx.fillText('FREEDOM AT LAST! 🐰', canvas.width / 2, canvas.height / 2);
     ctx.shadowBlur = 0;
     
     // Death count
     ctx.font = '28px Courier New';
-    ctx.fillStyle = '#4A3728';
+    ctx.fillStyle = '#FFFAFA';
     ctx.fillText('Total Deaths: ' + deathCount, canvas.width / 2, canvas.height / 2 + 50);
     
     // Rating
@@ -1656,19 +1658,19 @@ function drawWinScreen() {
     ctx.font = '20px Courier New';
     ctx.fillText(rating, canvas.width / 2, canvas.height / 2 + 90);
     
-    // Play again button (gold)
+    // Play again button (danger red)
     let btnWidth = 300;
     let btnHeight = 60;
     let btnX = canvas.width / 2 - btnWidth / 2;
     let btnY = canvas.height / 2 + 130;
     
-    ctx.fillStyle = '#C2B280';
+    ctx.fillStyle = '#8B0000';
     ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
-    ctx.strokeStyle = '#DAA520';
+    ctx.strokeStyle = '#FF4500';
     ctx.lineWidth = 3;
     ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
     
-    ctx.fillStyle = '#4A3728';
+    ctx.fillStyle = '#FFFAFA';
     ctx.font = 'bold 24px Courier New';
     ctx.fillText('PLAY AGAIN', canvas.width / 2, btnY + 38);
 }

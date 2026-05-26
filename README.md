@@ -1,8 +1,8 @@
-# 🐰 Desert Hopper
+# 🐰 Danger Zone
 
-**AziMeow_The_rabbit_game** - A trap platformer game featuring a cute Minecraft-style rabbit escaping through desert-themed levels!
+**AziMeow_The_rabbit_game** - A trap platformer game featuring a brave Minecraft-style rabbit escaping through deadly desert levels!
 
-![Desert Hopper Banner](https://img.shields.io/badge/Desert%20Hopper-1.0-blue?style=for-the-badge)
+![Danger Zone Banner](https://img.shields.io/badge/Danger%20Zone-1.0-red?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/Platform-HTML5-orange?style=for-the-badge)
 
@@ -10,12 +10,13 @@
 
 ## 🎮 Game Overview
 
-**Desert Hopper** is a challenging trap platformer where you control a cute Minecraft-style rabbit trying to escape through 10 increasingly difficult desert levels. Watch out for hidden traps, moving walls, gravity flips, and troll mechanics that will test your patience and reflexes!
+**Danger Zone** is a challenging trap platformer where you control a brave Minecraft-style rabbit trying to escape through 10 increasingly deadly desert levels. Watch out for hidden traps, moving walls, gravity flips, and troll mechanics that will test your patience and reflexes in a dangerous red-themed wasteland!
 
 ### 🌟 Features
 
-- **10 Unique Levels** - Each level has different trap mechanics and surprises
-- **Cute Minecraft-style Graphics** - Boxy rabbit character, sandstone platforms, cactus obstacles
+- **10 Unique Levels** - Each level has different trap mechanics and deadly surprises
+- **Brave Minecraft-style Graphics** - Boxy rabbit character, dark sandstone platforms, dangerous cactus obstacles
+- **Red/Dangerous Theme** - Ominous red sky, blood-red sun, and dark sandy wastelands
 - **Touch & Keyboard Controls** - Play on desktop or mobile
 - **Challenging Troll Mechanics** - Expect the unexpected!
 - **Death Counter** - Track how many times you've fallen
