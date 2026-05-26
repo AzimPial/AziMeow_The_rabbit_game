@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>DANGER ZONE - Can the rabbit survive the deadly desert?</title>
     <style>
         * {
@@ -20,69 +23,78 @@
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
-        }
-        
-        /* Subtle background noise texture */
-        body::before {
-            content: '';
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            background-image: 
-                radial-gradient(circle at 20% 30%, rgba(60, 20, 0, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(40, 10, 0, 0.1) 0%, transparent 50%);
-            opacity: 0.5;
-            z-index: -1;
+            overscroll-behavior: none;
         }
+        
         #gameCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             display: block;
-            width: 100%;
-            height: 100%;
+            touch-action: none;
         }
         #touchControls {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 120px;
+            height: 140px;
+            padding-bottom: env(safe-area-inset-bottom, 10px);
             display: none;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 20px;
+            padding: 15px 20px;
             pointer-events: none;
+            z-index: 100;
         }
         .touch-btn {
-            width: 70px;
-            height: 70px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            background: rgba(50, 10, 0, 0.5);
-            border: 3px solid rgba(139, 0, 0, 0.6);
+            background: rgba(50, 10, 0, 0.6);
+            border: 4px solid rgba(139, 0, 0, 0.8);
             color: rgba(255, 200, 200, 0.9);
-            font-size: 28px;
+            font-size: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             pointer-events: auto;
-            transition: background 0.1s;
-            box-shadow: 0 0 10px rgba(139, 0, 0, 0.3);
+            transition: background 0.05s, transform 0.05s;
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.4);
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
         .touch-btn:active, .touch-btn.active {
-            background: rgba(100, 20, 0, 0.7);
-            box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
+            background: rgba(139, 20, 0, 0.8);
+            box-shadow: 0 0 20px rgba(139, 0, 0, 0.7);
+            transform: scale(0.95);
         }
         .move-btns {
             display: flex;
-            gap: 15px;
+            gap: 20px;
         }
         #jumpBtn {
-            font-size: 22px;
+            font-size: 28px;
         }
-        @media (pointer: coarse), (max-width: 768px) {
+        @media (max-width: 768px), (pointer: coarse) {
             #touchControls {
                 display: flex;
+            }
+        }
+        @media (max-height: 500px) {
+            #touchControls {
+                height: 100px;
+                padding: 10px 20px;
+            }
+            .touch-btn {
+                width: 70px;
+                height: 70px;
+                font-size: 28px;
             }
         }
     </style>
@@ -204,8 +216,11 @@ let touchJump = false;
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.jump = true;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') { keys.jump = true; e.preventDefault(); }
     if (e.key === 'r' || e.key === 'R') keys.restart = true;
+    
+    // Prevent spacebar scrolling on mobile
+    if (e.key === ' ') e.preventDefault();
 });
 
 document.addEventListener('keyup', (e) => {
@@ -221,33 +236,50 @@ const rightBtn = document.getElementById('rightBtn');
 const jumpBtn = document.getElementById('jumpBtn');
 
 function setupTouchBtn(btn, key) {
-    btn.addEventListener('touchstart', (e) => {
+    // Use pointer events for better mobile support
+    btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        btn.setPointerCapture(e.pointerId);
         if (key === 'left') touchLeft = true;
         if (key === 'right') touchRight = true;
         if (key === 'jump') touchJump = true;
         btn.classList.add('active');
     });
-    btn.addEventListener('touchend', (e) => {
+    btn.addEventListener('pointerup', (e) => {
         e.preventDefault();
         if (key === 'left') touchLeft = false;
         if (key === 'right') touchRight = false;
         if (key === 'jump') touchJump = false;
         btn.classList.remove('active');
     });
-    btn.addEventListener('touchcancel', (e) => {
+    btn.addEventListener('pointercancel', (e) => {
         if (key === 'left') touchLeft = false;
         if (key === 'right') touchRight = false;
         if (key === 'jump') touchJump = false;
         btn.classList.remove('active');
     });
+    btn.addEventListener('pointerleave', (e) => {
+        if (key === 'left') touchLeft = false;
+        if (key === 'right') touchRight = false;
+        if (key === 'jump') touchJump = false;
+        btn.classList.remove('active');
+    });
+    
+    // Prevent context menu on long press
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 setupTouchBtn(leftBtn, 'left');
 setupTouchBtn(rightBtn, 'right');
 setupTouchBtn(jumpBtn, 'jump');
 
-canvas.addEventListener('click', handleClick);
+// Canvas click/tap handler (for start screen, buttons, etc.)
+function handleCanvasInteraction(e) {
+    e.preventDefault();
+    handleClick(e);
+}
+canvas.addEventListener('click', handleCanvasInteraction);
+canvas.addEventListener('touchstart', handleCanvasInteraction, { passive: false });
 
 // ============================================================
 // PLAYER
@@ -1760,8 +1792,16 @@ function update() {
 }
 
 function render() {
-    // Apply screen shake
+    // Clear canvas
+    ctx.fillStyle = '#1A0500';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Apply scaling and centering
     ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+    
+    // Apply screen shake
     if (screenShake > 0) {
         ctx.translate(
             (Math.random() - 0.5) * screenShake,
@@ -1805,18 +1845,36 @@ function gameLoop() {
 }
 
 // ============================================================
-// RESIZE HANDLING
+// RESIZE HANDLING & SCALING
 // ============================================================
+const BASE_WIDTH = 800;
+const BASE_HEIGHT = 450;
+let scale = 1;
+let offsetX = 0;
+let offsetY = 0;
+
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    
+    // Calculate scale to fit game in screen while maintaining aspect ratio
+    let scaleX = canvas.width / BASE_WIDTH;
+    let scaleY = canvas.height / BASE_HEIGHT;
+    scale = Math.min(scaleX, scaleY);
+    
+    // Center the game
+    offsetX = (canvas.width - BASE_WIDTH * scale) / 2;
+    offsetY = (canvas.height - BASE_HEIGHT * scale) / 2;
 }
 
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// Start the game
-gameLoop();
+function gameLoop() {
+    update();
+    render();
+    requestAnimationFrame(gameLoop);
+}
     </script>
 </body>
 </html>
