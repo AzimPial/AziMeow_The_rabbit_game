@@ -423,14 +423,26 @@ function resolveCollisionsX(platforms) {
 }
 
 function resolveCollisionsY(platforms) {
+    let inverted = level.invertedGravity;
     for (let p of platforms) {
         if (!p.solid) continue;
         if (checkAABB(player, p)) {
-            if (player.vy > 0) {
-                player.y = p.y - player.height;
-                player.grounded = true;
-            } else if (player.vy < 0) {
-                player.y = p.y + p.height;
+            if (inverted) {
+                // Inverted gravity: negative vy = falling (toward ceiling)
+                if (player.vy < 0) {
+                    player.y = p.y + p.height;
+                    player.grounded = true;
+                } else if (player.vy > 0) {
+                    player.y = p.y - player.height;
+                }
+            } else {
+                // Normal gravity: positive vy = falling (toward floor)
+                if (player.vy > 0) {
+                    player.y = p.y - player.height;
+                    player.grounded = true;
+                } else if (player.vy < 0) {
+                    player.y = p.y + p.height;
+                }
             }
             player.vy = 0;
         }
