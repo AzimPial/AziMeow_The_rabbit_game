@@ -1027,7 +1027,7 @@ function drawBackground(level) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Dark textured noise layer
-    ctx.fillStyle = 'rgba(30, 0, 0, 0.15)';
+    ctx.fillStyle = 'rgba(20, 0, 0, 0.15)';
     for (let nx = 0; nx < canvas.width; nx += 4) {
         for (let ny = 0; ny < canvas.height; ny += 4) {
             if (Math.random() > 0.5) {
@@ -1037,7 +1037,7 @@ function drawBackground(level) {
     }
     
     // Subtle sand grain texture overlay
-    ctx.fillStyle = 'rgba(60, 20, 0, 0.08)';
+    ctx.fillStyle = 'rgba(40, 10, 0, 0.06)';
     for (let gx = 0; gx < canvas.width; gx += 16) {
         for (let gy = 0; gy < canvas.height; gy += 16) {
             if (Math.random() > 0.4) {
@@ -1046,19 +1046,50 @@ function drawBackground(level) {
         }
     }
     
-    // Blood red sun (warning, less intense)
-    ctx.fillStyle = '#CC3300';
+    // Glowing sun aura (ambient red from sun)
+    let auraGradient = ctx.createRadialGradient(canvas.width - 100, 80, 50, canvas.width - 100, 80, canvas.height);
+    auraGradient.addColorStop(0, 'rgba(139, 20, 0, 0.5)');
+    auraGradient.addColorStop(0.3, 'rgba(100, 15, 0, 0.3)');
+    auraGradient.addColorStop(0.6, 'rgba(60, 10, 0, 0.2)');
+    auraGradient.addColorStop(1, 'rgba(30, 5, 0, 0)');
+    ctx.fillStyle = auraGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // INTENSE Blood red sun (radiant)
+    ctx.fillStyle = '#FF2200';
     ctx.beginPath();
     ctx.arc(canvas.width - 100, 80, 35, 0, Math.PI * 2);
     ctx.fill();
     
-    // Subtle sun glow (ominous but muted)
-    let sunGlow = ctx.createRadialGradient(canvas.width - 100, 80, 25, canvas.width - 100, 80, 70);
-    sunGlow.addColorStop(0, 'rgba(180, 40, 20, 0.4)');
-    sunGlow.addColorStop(0.5, 'rgba(139, 0, 0, 0.2)');
+    // Sun inner glow (bright center)
+    let sunInnerGlow = ctx.createRadialGradient(canvas.width - 100, 80, 0, canvas.width - 100, 80, 35);
+    sunInnerGlow.addColorStop(0, 'rgba(255, 100, 50, 1)');
+    sunInnerGlow.addColorStop(0.7, 'rgba(200, 30, 0, 0.8)');
+    sunInnerGlow.addColorStop(1, 'rgba(139, 0, 0, 1)');
+    ctx.fillStyle = sunInnerGlow;
+    ctx.fill();
+    
+    // Sun outer corona glow
+    let sunGlow = ctx.createRadialGradient(canvas.width - 100, 80, 35, canvas.width - 100, 80, 100);
+    sunGlow.addColorStop(0, 'rgba(255, 80, 30, 0.6)');
+    sunGlow.addColorStop(0.4, 'rgba(180, 30, 0, 0.3)');
+    sunGlow.addColorStop(0.7, 'rgba(139, 0, 0, 0.15)');
     sunGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
     ctx.fillStyle = sunGlow;
-    ctx.fillRect(canvas.width - 170, 10, 140, 140);
+    ctx.fillRect(canvas.width - 200, -20, 200, 200);
+    
+    // Sun rays (subtle)
+    ctx.strokeStyle = 'rgba(255, 80, 30, 0.2)';
+    ctx.lineWidth = 2;
+    for (let r = 0; r < 8; r++) {
+        let angle = (r / 8) * Math.PI * 2;
+        let rx = canvas.width - 100 + Math.cos(angle) * 50;
+        let ry = 80 + Math.sin(angle) * 50;
+        ctx.beginPath();
+        ctx.moveTo(rx, ry);
+        ctx.lineTo(rx + Math.cos(angle) * 80, ry + Math.sin(angle) * 80);
+        ctx.stroke();
+    }
     
     // Dark sand dunes in background (parallax feel)
     ctx.fillStyle = '#3D1A05';
