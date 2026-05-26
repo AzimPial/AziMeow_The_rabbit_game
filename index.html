@@ -43,43 +43,57 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 140px;
+            height: 160px;
             padding-bottom: env(safe-area-inset-bottom, 10px);
             display: none;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
+            padding: 20px 30px;
             pointer-events: none;
             z-index: 100;
         }
+        #touchControls .move-btns {
+            display: flex;
+            gap: 15px;
+        }
+        #touchControls .action-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        #restartBtn {
+            font-size: 22px;
+            width: 65px;
+            height: 65px;
+            opacity: 0.8;
+        }
         .touch-btn {
-            width: 80px;
-            height: 80px;
+            width: 75px;
+            height: 75px;
             border-radius: 50%;
-            background: rgba(50, 10, 0, 0.6);
-            border: 4px solid rgba(139, 0, 0, 0.8);
+            background: rgba(50, 10, 0, 0.7);
+            border: 4px solid rgba(139, 0, 0, 0.9);
             color: rgba(255, 200, 200, 0.9);
-            font-size: 32px;
+            font-size: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
             pointer-events: auto;
             transition: background 0.05s, transform 0.05s;
-            box-shadow: 0 0 15px rgba(139, 0, 0, 0.4);
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
             -webkit-tap-highlight-color: transparent;
             user-select: none;
+            -webkit-user-select: none;
         }
         .touch-btn:active, .touch-btn.active {
-            background: rgba(139, 20, 0, 0.8);
-            box-shadow: 0 0 20px rgba(139, 0, 0, 0.7);
-            transform: scale(0.95);
-        }
-        .move-btns {
-            display: flex;
-            gap: 20px;
+            background: rgba(139, 20, 0, 0.9);
+            box-shadow: 0 0 25px rgba(139, 0, 0, 0.8);
+            transform: scale(0.92);
         }
         #jumpBtn {
-            font-size: 28px;
+            width: 90px;
+            height: 90px;
+            font-size: 32px;
         }
         @media (max-width: 768px), (pointer: coarse) {
             #touchControls {
@@ -88,13 +102,12 @@
         }
         @media (max-height: 500px) {
             #touchControls {
-                height: 100px;
-                padding: 10px 20px;
+                height: 120px;
+                padding: 15px 20px;
             }
             .touch-btn {
-                width: 70px;
-                height: 70px;
-                font-size: 28px;
+                width: 60px;
+                height: 60px;
             }
         }
     </style>
@@ -106,7 +119,10 @@
             <button id="leftBtn" class="touch-btn">&#9664;</button>
             <button id="rightBtn" class="touch-btn">&#9654;</button>
         </div>
-        <button id="jumpBtn" class="touch-btn">&#9650;</button>
+        <div class="action-btns">
+            <button id="jumpBtn" class="touch-btn">&#9650;</button>
+            <button id="restartBtn" class="touch-btn">&#8635;</button>
+        </div>
     </div>
 
     <script>
@@ -234,6 +250,7 @@ document.addEventListener('keyup', (e) => {
 const leftBtn = document.getElementById('leftBtn');
 const rightBtn = document.getElementById('rightBtn');
 const jumpBtn = document.getElementById('jumpBtn');
+const restartBtn = document.getElementById('restartBtn');
 
 function setupTouchBtn(btn, key) {
     // Use pointer events for better mobile support
@@ -272,6 +289,22 @@ function setupTouchBtn(btn, key) {
 setupTouchBtn(leftBtn, 'left');
 setupTouchBtn(rightBtn, 'right');
 setupTouchBtn(jumpBtn, 'jump');
+
+// Restart button (separate handler)
+restartBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    keys.restart = true;
+    restartBtn.classList.add('active');
+});
+restartBtn.addEventListener('pointerup', (e) => {
+    e.preventDefault();
+    keys.restart = false;
+    restartBtn.classList.remove('active');
+});
+restartBtn.addEventListener('pointercancel', () => {
+    keys.restart = false;
+    restartBtn.classList.remove('active');
+});
 
 // Canvas click/tap handler (for start screen, buttons, etc.)
 function handleCanvasInteraction(e) {
@@ -1847,8 +1880,8 @@ function gameLoop() {
 // ============================================================
 // RESIZE HANDLING & SCALING
 // ============================================================
-const BASE_WIDTH = 800;
-const BASE_HEIGHT = 450;
+let BASE_WIDTH = 800;
+let BASE_HEIGHT = 450;
 let scale = 1;
 let offsetX = 0;
 let offsetY = 0;
@@ -1856,6 +1889,17 @@ let offsetY = 0;
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    
+    // Use portrait orientation for mobile, landscape for desktop
+    let isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+    if (isMobile && window.innerHeight > window.innerWidth) {
+        // Portrait mode - swap dimensions
+        BASE_WIDTH = 450;
+        BASE_HEIGHT = 800;
+    } else {
+        BASE_WIDTH = 800;
+        BASE_HEIGHT = 450;
+    }
     
     // Calculate scale to fit game in screen while maintaining aspect ratio
     let scaleX = canvas.width / BASE_WIDTH;
@@ -1865,9 +1909,23 @@ function resizeCanvas() {
     // Center the game
     offsetX = (canvas.width - BASE_WIDTH * scale) / 2;
     offsetY = (canvas.height - BASE_HEIGHT * scale) / 2;
+    
+    // Clear level cache to avoid noise pattern bugs
+    if (typeof currentLevelData !== 'undefined' && currentLevelData) {
+        currentLevelData._noisePattern = null;
+    }
+    for (let lvl of levels) {
+        if (lvl._noisePattern) lvl._noisePattern = null;
+        if (lvl.platforms) {
+            for (let p of lvl.platforms) {
+                if (p._texture) p._texture = null;
+            }
+        }
+    }
 }
 
 window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
 resizeCanvas();
 
 function gameLoop() {
