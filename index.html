@@ -1816,6 +1816,7 @@ function render() {
     // Clear canvas
     ctx.fillStyle = '#1A0500';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    console.log('render called, GAME_WIDTH:', GAME_WIDTH, 'GAME_HEIGHT:', GAME_HEIGHT);
     
     // Apply scaling and centering
     ctx.save();
@@ -1873,6 +1874,7 @@ let offsetY = 0;
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    console.log('resizeCanvas - screen:', canvas.width, 'x', canvas.height);
     
     // Use portrait orientation for mobile, landscape for desktop
     let isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
@@ -1884,6 +1886,7 @@ function resizeCanvas() {
         GAME_WIDTH = BASE_WIDTH;
         GAME_HEIGHT = BASE_HEIGHT;
     }
+    console.log('resizeCanvas - GAME:', GAME_WIDTH, 'x', GAME_HEIGHT);
     
     // Calculate scale to fit game in screen while maintaining aspect ratio
     let scaleX = canvas.width / GAME_WIDTH;
@@ -1896,6 +1899,7 @@ function resizeCanvas() {
 }
 
 function gameLoop() {
+    console.log('gameLoop running, gameState:', gameState);
     update();
     render();
     requestAnimationFrame(gameLoop);
