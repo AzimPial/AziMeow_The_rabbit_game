@@ -1813,10 +1813,9 @@ function update() {
 }
 
 function render() {
-    // Clear canvas
+    // Clear canvas with solid color
     ctx.fillStyle = '#1A0500';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    console.log('render called, GAME_WIDTH:', GAME_WIDTH, 'GAME_HEIGHT:', GAME_HEIGHT);
     
     // Apply scaling and centering
     ctx.save();
@@ -1861,7 +1860,7 @@ function render() {
 }
 
 // ============================================================
-// RESIZE HANDLING & SCALING (must be before gameLoop)
+// GAME CONSTANTS
 // ============================================================
 const BASE_WIDTH = 800;
 const BASE_HEIGHT = 450;
@@ -1871,6 +1870,18 @@ let scale = 1;
 let offsetX = 0;
 let offsetY = 0;
 
+// ============================================================
+// GAME LOOP
+// ============================================================
+function gameLoop() {
+    update();
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// RESIZE HANDLING & SCALING
+// ============================================================
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -1896,16 +1907,10 @@ function resizeCanvas() {
     // Center the game
     offsetX = (canvas.width - GAME_WIDTH * scale) / 2;
     offsetY = (canvas.height - GAME_HEIGHT * scale) / 2;
+    console.log('resizeCanvas - scale:', scale, 'offset:', offsetX, offsetY);
 }
 
-function gameLoop() {
-    console.log('gameLoop running, gameState:', gameState);
-    update();
-    render();
-    requestAnimationFrame(gameLoop);
-}
-
-// Initialize after constants are defined
+// Initialize after everything is defined
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
 resizeCanvas();
