@@ -394,7 +394,7 @@ function updatePlayer(level) {
     
     player.y += player.vy;
     player.grounded = false;
-    resolveCollisionsY(level.platforms);
+    resolveCollisionsY(level.platforms, level.invertedGravity);
 
     // Idle bob animation
     player.bobTimer += 0.1;
@@ -422,8 +422,7 @@ function resolveCollisionsX(platforms) {
     }
 }
 
-function resolveCollisionsY(platforms) {
-    let inverted = level.invertedGravity;
+function resolveCollisionsY(platforms, inverted) {
     for (let p of platforms) {
         if (!p.solid) continue;
         if (checkAABB(player, p)) {
