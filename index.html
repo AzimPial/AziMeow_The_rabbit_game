@@ -1616,15 +1616,20 @@ function drawConfetti() {
 }
 
 function drawUI() {
-    // Death counter (sandstone carved style)
-    ctx.fillStyle = '#4A3728';
-    ctx.font = 'bold 20px Courier New';
+    // Death counter (bottom-left corner - out of gameplay area)
+    ctx.fillStyle = 'rgba(74, 55, 40, 0.8)';
+    ctx.fillRect(10, GAME_HEIGHT - 50, 140, 35);
+    ctx.fillStyle = '#DEB887';
+    ctx.font = 'bold 18px Courier New';
     ctx.textAlign = 'left';
-    ctx.fillText('DEATHS: ' + deathCount, 20, 35);
+    ctx.fillText('DEATHS: ' + deathCount, 20, GAME_HEIGHT - 22);
     
-    // Level indicator
+    // Level indicator (bottom-right corner)
+    ctx.fillStyle = 'rgba(74, 55, 40, 0.8)';
+    ctx.fillRect(GAME_WIDTH - 110, GAME_HEIGHT - 50, 100, 35);
+    ctx.fillStyle = '#DEB887';
     ctx.textAlign = 'right';
-    ctx.fillText('LEVEL ' + (currentLevel + 1), GAME_WIDTH - 20, 35);
+    ctx.fillText('LVL ' + (currentLevel + 1), GAME_WIDTH - 20, GAME_HEIGHT - 22);
 }
 
 function drawStartScreen() {
