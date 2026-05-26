@@ -1016,18 +1016,16 @@ function handleClick(e) {
 // RENDERING
 // ============================================================
 function drawBackground(level) {
-    // Darker muted red desert sky gradient (lower opacity effect)
+    // Base dark background
     let skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    skyGradient.addColorStop(0, '#4A0000');
-    skyGradient.addColorStop(0.3, '#6B1010');
-    skyGradient.addColorStop(0.6, '#8B2020');
-    skyGradient.addColorStop(0.85, '#6B3A1F');
-    skyGradient.addColorStop(1, '#4A2A10');
+    skyGradient.addColorStop(0, '#1A0500');
+    skyGradient.addColorStop(0.5, '#2A0A00');
+    skyGradient.addColorStop(1, '#3D1505');
     ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Dark textured noise layer
-    ctx.fillStyle = 'rgba(20, 0, 0, 0.15)';
+    ctx.fillStyle = 'rgba(20, 0, 0, 0.12)';
     for (let nx = 0; nx < canvas.width; nx += 4) {
         for (let ny = 0; ny < canvas.height; ny += 4) {
             if (Math.random() > 0.5) {
@@ -1036,22 +1034,13 @@ function drawBackground(level) {
         }
     }
     
-    // Subtle sand grain texture overlay
-    ctx.fillStyle = 'rgba(40, 10, 0, 0.06)';
-    for (let gx = 0; gx < canvas.width; gx += 16) {
-        for (let gy = 0; gy < canvas.height; gy += 16) {
-            if (Math.random() > 0.4) {
-                ctx.fillRect(gx + Math.random() * 8, gy + Math.random() * 8, 1, 1);
-            }
-        }
-    }
-    
-    // Glowing sun aura (ambient red from sun)
-    let auraGradient = ctx.createRadialGradient(canvas.width - 100, 80, 50, canvas.width - 100, 80, canvas.height);
-    auraGradient.addColorStop(0, 'rgba(139, 20, 0, 0.5)');
-    auraGradient.addColorStop(0.3, 'rgba(100, 15, 0, 0.3)');
-    auraGradient.addColorStop(0.6, 'rgba(60, 10, 0, 0.2)');
-    auraGradient.addColorStop(1, 'rgba(30, 5, 0, 0)');
+    // Glowing sun aura - radial gradient from sun position (top-right corner) fading downward
+    let auraGradient = ctx.createRadialGradient(canvas.width - 100, 80, 20, canvas.width - 100, 80, canvas.height * 0.9);
+    auraGradient.addColorStop(0, 'rgba(180, 30, 0, 0.6)');
+    auraGradient.addColorStop(0.15, 'rgba(150, 25, 0, 0.5)');
+    auraGradient.addColorStop(0.35, 'rgba(120, 20, 0, 0.35)');
+    auraGradient.addColorStop(0.6, 'rgba(80, 15, 0, 0.2)');
+    auraGradient.addColorStop(1, 'rgba(40, 5, 0, 0)');
     ctx.fillStyle = auraGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
@@ -1070,16 +1059,16 @@ function drawBackground(level) {
     ctx.fill();
     
     // Sun outer corona glow
-    let sunGlow = ctx.createRadialGradient(canvas.width - 100, 80, 35, canvas.width - 100, 80, 100);
-    sunGlow.addColorStop(0, 'rgba(255, 80, 30, 0.6)');
-    sunGlow.addColorStop(0.4, 'rgba(180, 30, 0, 0.3)');
-    sunGlow.addColorStop(0.7, 'rgba(139, 0, 0, 0.15)');
-    sunGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
+    let sunGlow = ctx.createRadialGradient(canvas.width - 100, 80, 35, canvas.width - 100, 80, 120);
+    sunGlow.addColorStop(0, 'rgba(255, 80, 30, 0.7)');
+    sunGlow.addColorStop(0.4, 'rgba(200, 40, 0, 0.4)');
+    sunGlow.addColorStop(0.7, 'rgba(150, 20, 0, 0.2)');
+    sunGlow.addColorStop(1, 'rgba(100, 10, 0, 0)');
     ctx.fillStyle = sunGlow;
-    ctx.fillRect(canvas.width - 200, -20, 200, 200);
+    ctx.fillRect(canvas.width - 220, -40, 240, 240);
     
     // Sun rays (subtle)
-    ctx.strokeStyle = 'rgba(255, 80, 30, 0.2)';
+    ctx.strokeStyle = 'rgba(255, 80, 30, 0.15)';
     ctx.lineWidth = 2;
     for (let r = 0; r < 8; r++) {
         let angle = (r / 8) * Math.PI * 2;
@@ -1087,7 +1076,7 @@ function drawBackground(level) {
         let ry = 80 + Math.sin(angle) * 50;
         ctx.beginPath();
         ctx.moveTo(rx, ry);
-        ctx.lineTo(rx + Math.cos(angle) * 80, ry + Math.sin(angle) * 80);
+        ctx.lineTo(rx + Math.cos(angle) * 100, ry + Math.sin(angle) * 100);
         ctx.stroke();
     }
     
@@ -1436,143 +1425,96 @@ function drawPlayer() {
     let py = player.y + player.bobOffset;
     let cx = px + player.width / 2;
     
-    // Dynamic ear wiggle based on movement
-    let earWiggle = Math.sin(Date.now() / 150) * 0.1;
-    
-    // Shadow under player (ellipse for soft shadow)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    // Shadow under player
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.beginPath();
     ctx.ellipse(cx, py + player.height + 3, player.width / 2 + 2, 5, 0, 0, Math.PI * 2);
     ctx.fill();
     
-    // === FEET (behind body) - Minecraft style ===
-    ctx.fillStyle = '#E0E0E0';
+    // === FEET - Dark maroon
+    ctx.fillStyle = '#4A2020';
     ctx.fillRect(px + 2, py + player.height - 2, 10, 6);
     ctx.fillRect(px + player.width - 12, py + player.height - 2, 10, 6);
     
-    // === BODY - Minecraft boxy style ===
-    // Main body (rectangle)
-    ctx.fillStyle = '#F5F5F5';
+    // === BODY - Mature dark maroon/brown
+    ctx.fillStyle = '#5C2020';
     ctx.fillRect(px + 4, py + 15, player.width - 8, player.height - 18);
     
     // Body shading (right side darker)
-    ctx.fillStyle = '#DCDCDC';
+    ctx.fillStyle = '#3D1515';
     ctx.fillRect(px + 4, py + 15, 4, player.height - 18);
     
-    // Tummy (lighter rectangle)
-    ctx.fillStyle = '#FAFAFA';
-    ctx.fillRect(cx - 6, py + 20, 12, player.height - 28);
+    // === TAIL - Dark maroon ball
+    ctx.fillStyle = '#4A1818';
+    ctx.fillRect(px + player.width - 2, py + player.height - 16, 10, 10);
+    ctx.fillStyle = '#3D1515';
+    ctx.fillRect(px + player.width + 4, py + player.height - 14, 4, 4);
     
-    // === HEAD - Boxy Minecraft style ===
-    ctx.fillStyle = '#F5F5F5';
+    // === HEAD - Dark maroon
+    ctx.fillStyle = '#5C2020';
     ctx.fillRect(cx - 14, py + 2, 28, 24);
     
     // Head shading
-    ctx.fillStyle = '#DCDCDC';
+    ctx.fillStyle = '#3D1515';
     ctx.fillRect(cx - 14, py + 2, 4, 24);
     
-    // === EARS - Boxy rounded tops ===
+    // === EARS - Boxy rounded tops, dark maroon
     // Left ear outer
-    ctx.fillStyle = '#F5F5F5';
+    ctx.fillStyle = '#5C2020';
     ctx.fillRect(px + 2, py - 12, 10, 18);
     // Left ear top (rounded)
     ctx.beginPath();
     ctx.arc(px + 7, py - 12, 5, Math.PI, 0);
     ctx.fill();
-    // Left ear inner (pink)
-    ctx.fillStyle = '#FFB6C1';
+    // Left ear inner (dark maroon)
+    ctx.fillStyle = '#3D1515';
     ctx.fillRect(px + 4, py - 10, 6, 14);
     ctx.beginPath();
     ctx.arc(px + 7, py - 10, 3, Math.PI, 0);
     ctx.fill();
     
     // Right ear outer
-    ctx.fillStyle = '#F5F5F5';
+    ctx.fillStyle = '#5C2020';
     ctx.fillRect(px + player.width - 12, py - 12, 10, 18);
     // Right ear top (rounded)
     ctx.beginPath();
     ctx.arc(px + player.width - 7, py - 12, 5, Math.PI, 0);
     ctx.fill();
-    // Right ear inner (pink)
-    ctx.fillStyle = '#FFB6C1';
+    // Right ear inner (dark maroon)
+    ctx.fillStyle = '#3D1515';
     ctx.fillRect(px + player.width - 10, py - 10, 6, 14);
     ctx.beginPath();
     ctx.arc(px + player.width - 7, py - 10, 3, Math.PI, 0);
     ctx.fill();
     
-    // === EYES - Pixelated Minecraft style ===
-    // Eye whites (pixel squares)
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(cx - 10, py + 6, 8, 10);
-    ctx.fillRect(cx + 2, py + 6, 8, 10);
+    // === EYES - Fierce dark red
+    // Eye outline (darker)
+    ctx.fillStyle = '#1A0505';
+    ctx.fillRect(cx - 11, py + 5, 10, 12);
+    ctx.fillRect(cx + 1, py + 5, 10, 12);
     
-    // Pupils (dark squares)
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(cx - 8, py + 8, 6, 8);
-    ctx.fillRect(cx + 4, py + 8, 6, 8);
+    // Pupils (dark red)
+    ctx.fillStyle = '#5C1010';
+    ctx.fillRect(cx - 9, py + 7, 8, 10);
+    ctx.fillRect(cx + 3, py + 7, 8, 10);
     
-    // Eye shine (small white pixel)
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(cx - 6, py + 8, 2, 2);
-    ctx.fillRect(cx + 6, py + 8, 2, 2);
+    // Eye shine (amber glint)
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(cx - 7, py + 7, 3, 3);
+    ctx.fillRect(cx + 5, py + 7, 3, 3);
     
-    // === NOSE - Small pink box ===
-    ctx.fillStyle = '#FFB6C1';
+    // === NOSE - Dark maroon
+    ctx.fillStyle = '#2A1010';
     ctx.fillRect(cx - 3, py + 18, 6, 4);
     
-    // === MOUTH - Pixel lines ===
-    ctx.strokeStyle = '#C0A080';
+    // === MOUTH - Serious straight line
+    ctx.strokeStyle = '#2A1010';
     ctx.lineWidth = 2;
     ctx.lineCap = 'square';
-    // Cute 'w' mouth
     ctx.beginPath();
-    ctx.moveTo(cx - 4, py + 24);
-    ctx.lineTo(cx - 2, py + 26);
-    ctx.lineTo(cx, py + 24);
-    ctx.lineTo(cx + 2, py + 26);
-    ctx.lineTo(cx + 4, py + 24);
+    ctx.moveTo(cx - 5, py + 24);
+    ctx.lineTo(cx + 5, py + 24);
     ctx.stroke();
-    
-    // === CHEEKS (blush) - Soft squares ===
-    ctx.fillStyle = 'rgba(255, 182, 193, 0.4)';
-    ctx.fillRect(px + 1, py + 16, 6, 4);
-    ctx.fillRect(px + player.width - 7, py + 16, 6, 4);
-    
-    // === WHISKERS - Pixel lines ===
-    ctx.strokeStyle = 'rgba(192, 192, 192, 0.5)';
-    ctx.lineWidth = 1;
-    // Left whiskers
-    ctx.beginPath();
-    ctx.moveTo(px + 4, py + 18);
-    ctx.lineTo(px - 4, py + 16);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(px + 4, py + 20);
-    ctx.lineTo(px - 4, py + 20);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(px + 4, py + 22);
-    ctx.lineTo(px - 4, py + 24);
-    ctx.stroke();
-    // Right whiskers
-    ctx.beginPath();
-    ctx.moveTo(px + player.width - 4, py + 18);
-    ctx.lineTo(px + player.width + 4, py + 16);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(px + player.width - 4, py + 20);
-    ctx.lineTo(px + player.width + 4, py + 20);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(px + player.width - 4, py + 22);
-    ctx.lineTo(px + player.width + 4, py + 24);
-    ctx.stroke();
-    
-    // === TAIL - Fluffy pixel ball ===
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(px + player.width - 2, py + player.height - 16, 10, 10);
-    ctx.fillStyle = '#E8E8E8';
-    ctx.fillRect(px + player.width + 4, py + player.height - 14, 4, 4);
 }
 
 function drawParticles() {
