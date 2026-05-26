@@ -14,12 +14,28 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #3D0000;
+            background: #1A0500;
             font-family: 'Courier New', monospace;
             touch-action: none;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
+        }
+        
+        /* Subtle background noise texture */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(60, 20, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(40, 10, 0, 0.1) 0%, transparent 50%);
+            opacity: 0.5;
+            z-index: -1;
         }
         #gameCanvas {
             display: block;
@@ -42,18 +58,20 @@
             width: 70px;
             height: 70px;
             border-radius: 50%;
-            background: rgba(139, 0, 0, 0.4);
-            border: 3px solid rgba(255, 69, 0, 0.6);
-            color: rgba(255, 250, 250, 0.9);
+            background: rgba(50, 10, 0, 0.5);
+            border: 3px solid rgba(139, 0, 0, 0.6);
+            color: rgba(255, 200, 200, 0.9);
             font-size: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
             pointer-events: auto;
             transition: background 0.1s;
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.3);
         }
         .touch-btn:active, .touch-btn.active {
-            background: rgba(139, 0, 0, 0.7);
+            background: rgba(100, 20, 0, 0.7);
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
         }
         .move-btns {
             display: flex;
@@ -998,31 +1016,52 @@ function handleClick(e) {
 // RENDERING
 // ============================================================
 function drawBackground(level) {
-    // Dangerous red desert sky gradient
+    // Darker muted red desert sky gradient (lower opacity effect)
     let skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    skyGradient.addColorStop(0, '#8B0000');
-    skyGradient.addColorStop(0.5, '#B22222');
-    skyGradient.addColorStop(0.8, '#CD5C5C');
-    skyGradient.addColorStop(1, '#8B4513');
+    skyGradient.addColorStop(0, '#4A0000');
+    skyGradient.addColorStop(0.3, '#6B1010');
+    skyGradient.addColorStop(0.6, '#8B2020');
+    skyGradient.addColorStop(0.85, '#6B3A1F');
+    skyGradient.addColorStop(1, '#4A2A10');
     ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Blood red sun (dangerous)
-    ctx.fillStyle = '#FF4500';
+    // Dark textured noise layer
+    ctx.fillStyle = 'rgba(30, 0, 0, 0.15)';
+    for (let nx = 0; nx < canvas.width; nx += 4) {
+        for (let ny = 0; ny < canvas.height; ny += 4) {
+            if (Math.random() > 0.5) {
+                ctx.fillRect(nx, ny, 2, 2);
+            }
+        }
+    }
+    
+    // Subtle sand grain texture overlay
+    ctx.fillStyle = 'rgba(60, 20, 0, 0.08)';
+    for (let gx = 0; gx < canvas.width; gx += 16) {
+        for (let gy = 0; gy < canvas.height; gy += 16) {
+            if (Math.random() > 0.4) {
+                ctx.fillRect(gx + Math.random() * 8, gy + Math.random() * 8, 1, 1);
+            }
+        }
+    }
+    
+    // Blood red sun (warning, less intense)
+    ctx.fillStyle = '#CC3300';
     ctx.beginPath();
-    ctx.arc(canvas.width - 100, 80, 40, 0, Math.PI * 2);
+    ctx.arc(canvas.width - 100, 80, 35, 0, Math.PI * 2);
     ctx.fill();
     
-    // Red sun glow (ominous)
-    let sunGlow = ctx.createRadialGradient(canvas.width - 100, 80, 30, canvas.width - 100, 80, 80);
-    sunGlow.addColorStop(0, 'rgba(255, 69, 0, 0.6)');
-    sunGlow.addColorStop(0.5, 'rgba(178, 34, 34, 0.3)');
-    sunGlow.addColorStop(1, 'rgba(178, 34, 34, 0)');
+    // Subtle sun glow (ominous but muted)
+    let sunGlow = ctx.createRadialGradient(canvas.width - 100, 80, 25, canvas.width - 100, 80, 70);
+    sunGlow.addColorStop(0, 'rgba(180, 40, 20, 0.4)');
+    sunGlow.addColorStop(0.5, 'rgba(139, 0, 0, 0.2)');
+    sunGlow.addColorStop(1, 'rgba(139, 0, 0, 0)');
     ctx.fillStyle = sunGlow;
-    ctx.fillRect(canvas.width - 180, 0, 160, 160);
+    ctx.fillRect(canvas.width - 170, 10, 140, 140);
     
     // Dark sand dunes in background (parallax feel)
-    ctx.fillStyle = '#5D2906';
+    ctx.fillStyle = '#3D1A05';
     for (let d = 0; d < 5; d++) {
         let dx = d * 200 - 50;
         let dy = canvas.height - 150 + Math.sin(d * 1.5) * 30;
@@ -1032,8 +1071,8 @@ function drawBackground(level) {
         ctx.fill();
     }
     
-    // Minecraft-style dark sandstone block pattern (subtle)
-    ctx.fillStyle = 'rgba(93, 42, 10, 0.3)';
+    // Darker minecraft-style sandstone block pattern
+    ctx.fillStyle = 'rgba(40, 15, 0, 0.2)';
     for (let x = 0; x < canvas.width; x += 32) {
         for (let y = canvas.height - 80; y < canvas.height; y += 32) {
             ctx.fillRect(x, y, 31, 31);
