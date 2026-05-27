@@ -231,6 +231,7 @@ let touchJump = false;
 let touchJumpPressed = false;
 
 document.addEventListener('keydown', (e) => {
+    console.log('keydown:', e.key, e.code);
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
     if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') { keys.jump = true; e.preventDefault(); }
