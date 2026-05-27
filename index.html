@@ -259,14 +259,20 @@ function setupTouchBtn(btn, key) {
         btn.setPointerCapture(e.pointerId);
         if (key === 'left') touchLeft = true;
         if (key === 'right') touchRight = true;
-        if (key === 'jump') touchJump = true;
+        if (key === 'jump') {
+            touchJump = true;
+            console.log('TOUCH JUMP DOWN');
+        }
         btn.classList.add('active');
     });
     btn.addEventListener('pointerup', (e) => {
         e.preventDefault();
         if (key === 'left') touchLeft = false;
         if (key === 'right') touchRight = false;
-        if (key === 'jump') touchJump = false;
+        if (key === 'jump') {
+            touchJump = false;
+            console.log('TOUCH JUMP UP');
+        }
         btn.classList.remove('active');
     });
     btn.addEventListener('pointercancel', (e) => {
@@ -375,6 +381,9 @@ function updatePlayer(level) {
     player.vy = Math.max(-20, Math.min(20, player.vy));
 
     // Jump
+    // Debug touch input
+    console.log('Keys:', keys.jump, 'Touch:', touchJump, 'Grounded:', player.grounded, 'JumpHeld:', player.jumpHeld);
+    
     if ((keys.jump || touchJump) && player.grounded && !player.jumpHeld) {
         if (level.invertedGravity) {
             // In inverted gravity, jump pushes AWAY from ceiling (toward floor)
@@ -401,8 +410,32 @@ function updatePlayer(level) {
     resolveCollisionsX(level.platforms);
     
     player.y += player.vy;
-    player.grounded = false;
+    player.grounded = false;  // Reset first
     resolveCollisionsY(level.platforms, level.invertedGravity);
+    
+    // Fallback: check if player is resting on a platform (vy=0 and within platform bounds)
+    if (!player.grounded && player.vy === 0) {
+        for (let p of level.platforms) {
+            if (!p.solid) continue;
+            if (level.invertedGravity) {
+                // Inverted: grounded if standing on BOTTOM of platform (high y)
+                if (player.x + player.width > p.x && player.x < p.x + p.width &&
+                    player.y + player.height >= p.y && player.y + player.height <= p.y + 5) {
+                    player.grounded = true;
+                    player.y = p.y - player.height;
+                    break;
+                }
+            } else {
+                // Normal: grounded if standing on TOP of platform (low y)
+                if (player.x + player.width > p.x && player.x < p.x + p.width &&
+                    player.y + player.height >= p.y && player.y + player.height <= p.y + 5) {
+                    player.grounded = true;
+                    player.y = p.y - player.height;
+                    break;
+                }
+            }
+        }
+    }
 
     // Idle bob animation
     player.bobTimer += 0.1;
