@@ -383,6 +383,7 @@ function updatePlayer(level) {
 
     // Jump - simple direct check
     if ((keys.jump || touchJump) && player.grounded) {
+        console.log('JUMP!');
         player.vy = -JUMP_FORCE;
         player.grounded = false;
     }
@@ -400,17 +401,16 @@ function updatePlayer(level) {
         for (let p of level.platforms) {
             if (!p.solid) continue;
             if (level.invertedGravity) {
-                // Inverted: grounded if standing on BOTTOM of platform (high y)
+                // Inverted: check if player's top is near platform bottom
                 if (player.x + player.width > p.x && player.x < p.x + p.width &&
-                    player.y + player.height >= p.y && player.y + player.height <= p.y + 5) {
+                    player.y <= p.y + p.height && player.y >= p.y + p.height - 5) {
                     player.grounded = true;
-                    player.y = p.y - player.height;
                     break;
                 }
             } else {
-                // Normal: grounded if standing on TOP of platform (low y)
+                // Normal: check if player's feet are at or near platform top
                 if (player.x + player.width > p.x && player.x < p.x + p.width &&
-                    player.y + player.height >= p.y && player.y + player.height <= p.y + 5) {
+                    player.y + player.height >= p.y - 5 && player.y + player.height <= p.y + 5) {
                     player.grounded = true;
                     player.y = p.y - player.height;
                     break;
