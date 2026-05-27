@@ -358,7 +358,8 @@ function resetPlayer(spawnX, spawnY) {
 
 function updatePlayer(level) {
     if (player.dead) return;
-
+    console.log('updatePlayer running, state:', gameState);
+    
     // Check if controls are mirrored (Level 8)
     let moveLeft = keys.left || touchLeft;
     let moveRight = keys.right || touchRight;
@@ -382,6 +383,7 @@ function updatePlayer(level) {
     player.vy = Math.max(-20, Math.min(20, player.vy));
 
     // Jump - simple direct check
+    console.log('JumpCheck:', 'keys.jump=', keys.jump, 'touchJump=', touchJump, 'grounded=', player.grounded);
     if ((keys.jump || touchJump) && player.grounded) {
         console.log('JUMP!');
         player.vy = -JUMP_FORCE;
