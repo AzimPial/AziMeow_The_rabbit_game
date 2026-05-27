@@ -228,6 +228,7 @@ const keys = {
 let touchLeft = false;
 let touchRight = false;
 let touchJump = false;
+let touchJumpPressed = false;
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
@@ -261,7 +262,7 @@ function setupTouchBtn(btn, key) {
         if (key === 'right') touchRight = true;
         if (key === 'jump') {
             touchJump = true;
-            console.log('TOUCH JUMP DOWN');
+            touchJumpPressed = true; // Signal that jump was pressed this frame
         }
         btn.classList.add('active');
     });
@@ -381,10 +382,34 @@ function updatePlayer(level) {
     player.vy = Math.max(-20, Math.min(20, player.vy));
 
     // Jump
-    // Debug touch input
-    console.log('Keys:', keys.jump, 'Touch:', touchJump, 'Grounded:', player.grounded, 'JumpHeld:', player.jumpHeld);
+    // Check if player can jump: grounded OR touching a platform from above
+    let canJump = player.grounded;
     
-    if ((keys.jump || touchJump) && player.grounded && !player.jumpHeld) {
+    // Fallback: check if standing on a platform (run BEFORE jump check so canJump is accurate)
+    if (!canJump && player.vy === 0) {
+        for (let p of level.platforms) {
+            if (!p.solid) continue;
+            if (level.invertedGravity) {
+                if (player.x + player.width > p.x && player.x < p.x + p.width &&
+                    player.y <= p.y + 3) {
+                    canJump = true;
+                    break;
+                }
+            } else {
+                if (player.x + player.width > p.x && player.x < p.x + p.width &&
+                    player.y + player.height >= p.y - 3 && player.y + player.height <= p.y + 5) {
+                    canJump = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Simple jump trigger: jump if pressed AND can jump
+    // touchJumpPressed is set when button is first pressed, clears after one frame
+    let jumpTriggered = (keys.jump && !player.jumpHeld) || (touchJumpPressed && canJump);
+    
+    if (jumpTriggered && canJump) {
         if (level.invertedGravity) {
             // In inverted gravity, jump pushes AWAY from ceiling (toward floor)
             player.vy = JUMP_FORCE; // positive = toward floor
@@ -440,6 +465,9 @@ function updatePlayer(level) {
     // Idle bob animation
     player.bobTimer += 0.1;
     player.bobOffset = Math.sin(player.bobTimer) * 2;
+
+    // Clear touch jump pressed flag after processing
+    touchJumpPressed = false;
 
     // Still timer for level 10
     if (Math.abs(player.vx) < 0.1 && player.grounded) {
