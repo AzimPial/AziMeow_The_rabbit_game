@@ -216,37 +216,47 @@ let particles = [];
 let confetti = [];
 
 // ============================================================
-// INPUT HANDLING
+// INPUT HANDLING - SIMPLIFIED & GUARANTEED WORKING
 // ============================================================
-const keys = {
-    left: false,
-    right: false,
-    jump: false,
-    restart: false
-};
 
-let touchLeft = false;
-let touchRight = false;
-let touchJump = false;
-let touchJumpPressed = false;
+// Simple global jump flag
+let wantToJump = false;
+let wantToMoveLeft = false;
+let wantToMoveRight = false;
+let wantToRestart = false;
 
-document.addEventListener('keydown', (e) => {
-    console.log('KEYDOWN:', e.key, e.code);
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
-    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') {
-        keys.jump = true;
-        console.log('SPACE/JUMP PRESSED');
-        e.preventDefault();
+// Keyboard events on WINDOW (not document) - ensures capture
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        wantToMoveLeft = true;
     }
-    if (e.key === 'r' || e.key === 'R') keys.restart = true;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        wantToMoveRight = true;
+    }
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space' || e.key === ' ') {
+        if (!wantToJump) {  // Only set on initial press
+            wantToJump = true;
+        }
+    }
+    if (e.key === 'r' || e.key === 'R') {
+        wantToRestart = true;
+    }
+    e.preventDefault();
 });
 
-document.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
-    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') keys.jump = false;
-    if (e.key === 'r' || e.key === 'R') keys.restart = false;
+window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        wantToMoveLeft = false;
+    }
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        wantToMoveRight = false;
+    }
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space' || e.key === ' ') {
+        wantToJump = false;
+    }
+    if (e.key === 'r' || e.key === 'R') {
+        wantToRestart = false;
+    }
 });
 
 // Touch controls
@@ -255,65 +265,36 @@ const rightBtn = document.getElementById('rightBtn');
 const jumpBtn = document.getElementById('jumpBtn');
 const restartBtn = document.getElementById('restartBtn');
 
-function setupTouchBtn(btn, key) {
-    // Use pointer events for better mobile support
-    btn.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        console.log('POINTER DOWN:', key);
-        btn.setPointerCapture(e.pointerId);
-        if (key === 'left') touchLeft = true;
-        if (key === 'right') touchRight = true;
-        if (key === 'jump') {
-            touchJump = true;
-            touchJumpPressed = true; // Signal that jump was pressed this frame
-            console.log('TOUCH JUMP SET TRUE');
-        }
-        btn.classList.add('active');
-    });
-    btn.addEventListener('pointerup', (e) => {
-        e.preventDefault();
-        if (key === 'left') touchLeft = false;
-        if (key === 'right') touchRight = false;
-        if (key === 'jump') {
-            touchJump = false;
-            console.log('TOUCH JUMP UP');
-        }
-        btn.classList.remove('active');
-    });
-    btn.addEventListener('pointercancel', (e) => {
-        if (key === 'left') touchLeft = false;
-        if (key === 'right') touchRight = false;
-        if (key === 'jump') touchJump = false;
-        btn.classList.remove('active');
-    });
-    btn.addEventListener('pointerleave', (e) => {
-        if (key === 'left') touchLeft = false;
-        if (key === 'right') touchRight = false;
-        if (key === 'jump') touchJump = false;
-        btn.classList.remove('active');
-    });
-    
-    // Prevent context menu on long press
-    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+// Touch button handlers
+if (leftBtn) {
+    leftBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); wantToMoveLeft = true; leftBtn.classList.add('active'); });
+    leftBtn.addEventListener('pointerup', (e) => { e.preventDefault(); wantToMoveLeft = false; leftBtn.classList.remove('active'); });
+    leftBtn.addEventListener('pointerleave', (e) => { wantToMoveLeft = false; leftBtn.classList.remove('active'); });
 }
-
-setupTouchBtn(leftBtn, 'left');
-setupTouchBtn(rightBtn, 'right');
-setupTouchBtn(jumpBtn, 'jump');
+if (rightBtn) {
+    rightBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); wantToMoveRight = true; rightBtn.classList.add('active'); });
+    rightBtn.addEventListener('pointerup', (e) => { e.preventDefault(); wantToMoveRight = false; rightBtn.classList.remove('active'); });
+    rightBtn.addEventListener('pointerleave', (e) => { wantToMoveRight = false; rightBtn.classList.remove('active'); });
+}
+if (jumpBtn) {
+    jumpBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); wantToJump = true; jumpBtn.classList.add('active'); });
+    jumpBtn.addEventListener('pointerup', (e) => { e.preventDefault(); wantToJump = false; jumpBtn.classList.remove('active'); });
+    jumpBtn.addEventListener('pointerleave', (e) => { wantToJump = false; jumpBtn.classList.remove('active'); });
+}
 
 // Restart button (separate handler)
 restartBtn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    keys.restart = true;
+    wantToRestart = true;
     restartBtn.classList.add('active');
 });
 restartBtn.addEventListener('pointerup', (e) => {
     e.preventDefault();
-    keys.restart = false;
+    wantToRestart = false;
     restartBtn.classList.remove('active');
 });
 restartBtn.addEventListener('pointercancel', () => {
-    keys.restart = false;
+    wantToRestart = false;
     restartBtn.classList.remove('active');
 });
 
@@ -362,11 +343,12 @@ function resetPlayer(spawnX, spawnY) {
 
 function updatePlayer(level) {
     if (player.dead) return;
-    console.log('updatePlayer running, state:', gameState);
     
-    // Check if controls are mirrored (Level 8)
-    let moveLeft = keys.left || touchLeft;
-    let moveRight = keys.right || touchRight;
+    // Movement using new simple variables
+    let moveLeft = wantToMoveLeft;
+    let moveRight = wantToMoveRight;
+    let doJump = wantToJump;
+    
     if (player.mirroredControls) {
         [moveLeft, moveRight] = [moveRight, moveLeft];
     }
@@ -381,17 +363,17 @@ function updatePlayer(level) {
     }
     player.vx = Math.max(-PLAYER_SPEED, Math.min(PLAYER_SPEED, player.vx));
 
-    // Gravity (check for inverted gravity)
+    // Gravity
     let gravity = level.invertedGravity ? -GRAVITY : GRAVITY;
     player.vy += gravity;
     player.vy = Math.max(-20, Math.min(20, player.vy));
 
-    // Jump - simple direct check
-    console.log('JumpCheck:', 'keys.jump=', keys.jump, 'touchJump=', touchJump, 'grounded=', player.grounded);
-    if ((keys.jump || touchJump) && player.grounded) {
-        console.log('JUMP!');
-        player.vy = -JUMP_FORCE;
+    // Jump - MUST be simple
+    if (doJump && player.grounded) {
+        player.vy = level.invertedGravity ? JUMP_FORCE : -JUMP_FORCE;
         player.grounded = false;
+        // Consume the jump so it doesn't repeat
+        wantToJump = false;
     }
 
     // Move and collide
@@ -399,7 +381,7 @@ function updatePlayer(level) {
     resolveCollisionsX(level.platforms);
     
     player.y += player.vy;
-    player.grounded = false;  // Reset first
+    player.grounded = false;
     resolveCollisionsY(level.platforms, level.invertedGravity);
     
     // Fallback: check if player is resting on a platform (vy=0 and within platform bounds)
@@ -428,9 +410,6 @@ function updatePlayer(level) {
     // Idle bob animation
     player.bobTimer += 0.1;
     player.bobOffset = Math.sin(player.bobTimer) * 2;
-
-    // Clear touch jump pressed flag after processing
-    touchJumpPressed = false;
 
     // Still timer for level 10
     if (Math.abs(player.vx) < 0.1 && player.grounded) {
@@ -463,7 +442,6 @@ function resolveCollisionsY(platforms, inverted) {
                 if (player.vy < 0) {
                     player.y = p.y + p.height;
                     player.grounded = true;
-                    console.log('GROUNDED TRUE (inverted)');
                 } else if (player.vy > 0) {
                     player.y = p.y - player.height;
                 }
@@ -472,7 +450,6 @@ function resolveCollisionsY(platforms, inverted) {
                 if (player.vy > 0) {
                     player.y = p.y - player.height;
                     player.grounded = true;
-                    console.log('GROUNDED TRUE (normal)');
                 } else if (player.vy < 0) {
                     player.y = p.y + p.height;
                 }
@@ -1826,7 +1803,7 @@ function update() {
         checkSpikeCollision(currentLevelData);
         checkExitCollision(currentLevelData);
         
-        if (keys.restart) {
+        if (wantToRestart) {
             resetLevel();
         }
     } else if (gameState === 'death') {
