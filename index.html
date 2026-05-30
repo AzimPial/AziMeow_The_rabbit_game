@@ -368,12 +368,15 @@ function updatePlayer(level) {
     player.vy += gravity;
     player.vy = Math.max(-20, Math.min(20, player.vy));
 
-    // Jump - MUST be simple
-    if (doJump && player.grounded) {
-        player.vy = level.invertedGravity ? JUMP_FORCE : -JUMP_FORCE;
-        player.grounded = false;
-        // Consume the jump so it doesn't repeat
-        wantToJump = false;
+    // Jump - simple and robust
+    if (wantToJump) {
+        // Allow jump if grounded OR if we just landed (vy just became small)
+        if (player.grounded || Math.abs(player.vy) < 1) {
+            player.vy = level.invertedGravity ? JUMP_FORCE : -JUMP_FORCE;
+            player.grounded = false;
+            // Consume the jump so it doesn't repeat
+            wantToJump = false;
+        }
     }
 
     // Move and collide
@@ -384,8 +387,9 @@ function updatePlayer(level) {
     player.grounded = false;
     resolveCollisionsY(level.platforms, level.invertedGravity);
     
-    // Fallback: check if player is resting on a platform (vy=0 and within platform bounds)
-    if (!player.grounded && player.vy === 0) {
+    // Fallback: check if player is resting on a platform (small vy and within platform bounds)
+    // Use small threshold instead of exactly 0, because vy may have tiny residual
+    if (!player.grounded && Math.abs(player.vy) < 0.1) {
         for (let p of level.platforms) {
             if (!p.solid) continue;
             if (level.invertedGravity) {
