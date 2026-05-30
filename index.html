@@ -463,6 +463,7 @@ function resolveCollisionsY(platforms, inverted) {
                 if (player.vy < 0) {
                     player.y = p.y + p.height;
                     player.grounded = true;
+                    console.log('GROUNDED TRUE (inverted)');
                 } else if (player.vy > 0) {
                     player.y = p.y - player.height;
                 }
@@ -471,6 +472,7 @@ function resolveCollisionsY(platforms, inverted) {
                 if (player.vy > 0) {
                     player.y = p.y - player.height;
                     player.grounded = true;
+                    console.log('GROUNDED TRUE (normal)');
                 } else if (player.vy < 0) {
                     player.y = p.y + p.height;
                 }
