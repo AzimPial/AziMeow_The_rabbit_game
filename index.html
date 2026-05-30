@@ -372,7 +372,9 @@ function updatePlayer(level) {
     if (wantToJump) {
         // Allow jump if grounded OR if we just landed (vy just became small)
         if (player.grounded || Math.abs(player.vy) < 1) {
-            player.vy = level.invertedGravity ? -JUMP_FORCE : JUMP_FORCE;
+            // Normal gravity: jump UP (negative vy)
+            // Inverted gravity: jump toward ceiling (positive vy when inverted means going "up")
+            player.vy = level.invertedGravity ? JUMP_FORCE : -JUMP_FORCE;
             player.grounded = false;
             // Consume the jump so it doesn't repeat
             wantToJump = false;
@@ -1919,7 +1921,6 @@ function gameLoop() {
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    console.log('resizeCanvas - screen:', canvas.width, 'x', canvas.height);
     
     // Use portrait orientation for mobile, landscape for desktop
     let isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
@@ -1931,7 +1932,6 @@ function resizeCanvas() {
         GAME_WIDTH = BASE_WIDTH;
         GAME_HEIGHT = BASE_HEIGHT;
     }
-    console.log('resizeCanvas - GAME:', GAME_WIDTH, 'x', GAME_HEIGHT);
     
     // Calculate scale to fit game in screen while maintaining aspect ratio
     let scaleX = canvas.width / GAME_WIDTH;
@@ -1941,7 +1941,6 @@ function resizeCanvas() {
     // Center the game
     offsetX = (canvas.width - GAME_WIDTH * scale) / 2;
     offsetY = (canvas.height - GAME_HEIGHT * scale) / 2;
-    console.log('resizeCanvas - scale:', scale, 'offset:', offsetX, offsetY);
 }
 
 // Initialize after everything is defined
