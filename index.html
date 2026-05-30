@@ -372,7 +372,7 @@ function updatePlayer(level) {
     if (wantToJump) {
         // Allow jump if grounded OR if we just landed (vy just became small)
         if (player.grounded || Math.abs(player.vy) < 1) {
-            player.vy = level.invertedGravity ? JUMP_FORCE : -JUMP_FORCE;
+            player.vy = level.invertedGravity ? -JUMP_FORCE : JUMP_FORCE;
             player.grounded = false;
             // Consume the jump so it doesn't repeat
             wantToJump = false;
