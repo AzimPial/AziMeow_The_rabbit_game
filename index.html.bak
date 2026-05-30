@@ -231,21 +231,19 @@ let touchJump = false;
 let touchJumpPressed = false;
 
 document.addEventListener('keydown', (e) => {
-    console.log('KEYDOWN:', e.key, e.code);
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') {
-        keys.jump = true;
-        console.log('SPACE/JUMP PRESSED');
-        e.preventDefault();
-    }
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') { keys.jump = true; e.preventDefault(); }
     if (e.key === 'r' || e.key === 'R') keys.restart = true;
+    
+    // Prevent spacebar scrolling on mobile
+    if (e.key === ' ') e.preventDefault();
 });
 
 document.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'Space') keys.jump = false;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.jump = false;
     if (e.key === 'r' || e.key === 'R') keys.restart = false;
 });
 
@@ -259,14 +257,12 @@ function setupTouchBtn(btn, key) {
     // Use pointer events for better mobile support
     btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        console.log('POINTER DOWN:', key);
         btn.setPointerCapture(e.pointerId);
         if (key === 'left') touchLeft = true;
         if (key === 'right') touchRight = true;
         if (key === 'jump') {
             touchJump = true;
             touchJumpPressed = true; // Signal that jump was pressed this frame
-            console.log('TOUCH JUMP SET TRUE');
         }
         btn.classList.add('active');
     });
@@ -362,8 +358,7 @@ function resetPlayer(spawnX, spawnY) {
 
 function updatePlayer(level) {
     if (player.dead) return;
-    console.log('updatePlayer running, state:', gameState);
-    
+
     // Check if controls are mirrored (Level 8)
     let moveLeft = keys.left || touchLeft;
     let moveRight = keys.right || touchRight;
@@ -386,12 +381,53 @@ function updatePlayer(level) {
     player.vy += gravity;
     player.vy = Math.max(-20, Math.min(20, player.vy));
 
-    // Jump - simple direct check
-    console.log('JumpCheck:', 'keys.jump=', keys.jump, 'touchJump=', touchJump, 'grounded=', player.grounded);
-    if ((keys.jump || touchJump) && player.grounded) {
-        console.log('JUMP!');
-        player.vy = -JUMP_FORCE;
+    // Jump
+    // Check if player can jump: grounded OR touching a platform from above
+    let canJump = player.grounded;
+    
+    // Fallback: check if standing on a platform (run BEFORE jump check so canJump is accurate)
+    if (!canJump && player.vy === 0) {
+        for (let p of level.platforms) {
+            if (!p.solid) continue;
+            if (level.invertedGravity) {
+                if (player.x + player.width > p.x && player.x < p.x + p.width &&
+                    player.y <= p.y + 3) {
+                    canJump = true;
+                    break;
+                }
+            } else {
+                if (player.x + player.width > p.x && player.x < p.x + p.width &&
+                    player.y + player.height >= p.y - 3 && player.y + player.height <= p.y + 5) {
+                    canJump = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Simple jump trigger: jump if pressed AND can jump
+    // touchJumpPressed is set when button is first pressed, clears after one frame
+    let jumpTriggered = (keys.jump && !player.jumpHeld) || (touchJumpPressed && canJump);
+    
+    if (jumpTriggered && canJump) {
+        if (level.invertedGravity) {
+            // In inverted gravity, jump pushes AWAY from ceiling (toward floor)
+            player.vy = JUMP_FORCE; // positive = toward floor
+        } else {
+            player.vy = -JUMP_FORCE; // negative = toward ceiling
+        }
         player.grounded = false;
+        player.jumpHeld = true;
+    }
+    if (!keys.jump && !touchJump) {
+        player.jumpHeld = false;
+        // Variable jump height - applies to positive vy when inverted, negative when normal
+        if (player.vy < 0 && !level.invertedGravity) {
+            player.vy *= 0.9;
+        }
+        if (player.vy > 0 && level.invertedGravity) {
+            player.vy *= 0.9;
+        }
     }
 
     // Move and collide
@@ -407,16 +443,17 @@ function updatePlayer(level) {
         for (let p of level.platforms) {
             if (!p.solid) continue;
             if (level.invertedGravity) {
-                // Inverted: check if player's top is near platform bottom
+                // Inverted: grounded if standing on BOTTOM of platform (high y)
                 if (player.x + player.width > p.x && player.x < p.x + p.width &&
-                    player.y <= p.y + p.height && player.y >= p.y + p.height - 5) {
+                    player.y + player.height >= p.y && player.y + player.height <= p.y + 5) {
                     player.grounded = true;
+                    player.y = p.y - player.height;
                     break;
                 }
             } else {
-                // Normal: check if player's feet are at or near platform top
+                // Normal: grounded if standing on TOP of platform (low y)
                 if (player.x + player.width > p.x && player.x < p.x + p.width &&
-                    player.y + player.height >= p.y - 5 && player.y + player.height <= p.y + 5) {
+                    player.y + player.height >= p.y && player.y + player.height <= p.y + 5) {
                     player.grounded = true;
                     player.y = p.y - player.height;
                     break;
